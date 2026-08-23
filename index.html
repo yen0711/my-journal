@@ -312,17 +312,35 @@
   .post-body li{margin:.2em 0;}
   .post-body hr{border:none;border-top:1px solid var(--line);margin:1em 0;}
 
-  .post-media{display:grid;gap:8px;margin-top:14px;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));}
-  .post-media.single{grid-template-columns:1fr;}
-  .post-media figure{margin:0;border-radius:var(--r-sm);overflow:hidden;border:1px solid var(--line);background:var(--surface-2);}
-  .post-media img{width:100%;display:block;cursor:zoom-in;max-height:520px;object-fit:cover;}
-  .post-media.single img{object-fit:contain;background:var(--surface-2);}
-  .post-media video{width:100%;display:block;max-height:520px;background:#000;}
-  .post-media .file-link{
-    display:flex;align-items:center;gap:10px;padding:12px 14px;color:var(--ink);text-decoration:none;font-size:.85rem;
+  /* 貼文媒體：多張時橫向滑動，卡片不會一直往下長 */
+  .post-media{
+    display:flex;gap:8px;margin-top:14px;overflow-x:auto;scroll-snap-type:x proximity;
+    -webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px;
   }
-  .post-media .file-link:hover{background:var(--surface-2);}
-  .post-media .file-link svg{width:22px;height:22px;stroke:var(--accent);fill:none;stroke-width:1.6;flex-shrink:0;}
+  .post-media::-webkit-scrollbar{display:none;}
+  .post-media figure{
+    margin:0;border-radius:var(--r-sm);overflow:hidden;border:1px solid var(--line);
+    background:var(--surface-2);flex:0 0 auto;scroll-snap-align:start;
+  }
+  /* 只有一個視覺媒體：整寬顯示 */
+  .post-media.single{overflow:visible;}
+  .post-media.single figure{width:100%;}
+  .post-media.single img{width:100%;max-height:520px;object-fit:contain;background:var(--surface-2);display:block;cursor:zoom-in;}
+  .post-media.single video{width:100%;max-height:520px;background:#000;display:block;}
+  /* 多個視覺媒體：固定高度的橫向底片條 */
+  .post-media:not(.single) figure{height:230px;}
+  .post-media:not(.single) img{height:100%;width:auto;max-width:min(80vw,440px);object-fit:cover;display:block;cursor:zoom-in;}
+  .post-media:not(.single) video{height:100%;width:auto;max-width:min(80vw,440px);background:#000;display:block;}
+
+  /* 音檔與其他附件（數量少，維持縱向排列） */
+  .post-files{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
+  .post-files audio{width:100%;}
+  .post-files .file-link{
+    display:flex;align-items:center;gap:10px;padding:12px 14px;color:var(--ink);text-decoration:none;font-size:.85rem;
+    border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface-2);
+  }
+  .post-files .file-link:hover{border-color:var(--accent);}
+  .post-files .file-link svg{width:22px;height:22px;stroke:var(--accent);fill:none;stroke-width:1.6;flex-shrink:0;}
 
   /* ---------- Empty ---------- */
   .empty-state{text-align:center;padding:70px 20px;color:var(--faint);}
@@ -874,28 +892,44 @@ async function renderFeed(){
     `;
     // 媒體
     if(p.media && p.media.length){
-      const wrap = document.createElement('div');
-      wrap.className = 'post-media' + (p.media.length===1 ? ' single':'');
-      const imgUrls = [];   // 同一則貼文的所有圖片，供相簿式左右瀏覽
-      p.media.forEach(m=>{
-        const fig = document.createElement('figure');
-        const url = objURL(m.blob);
-        if(m.kind==='image'){
-          const idx = imgUrls.length; imgUrls.push(url);
-          const img=document.createElement('img'); img.src=url; img.alt=m.name||''; img.loading='lazy';
-          img.onclick=()=>openLightbox(imgUrls, idx); fig.appendChild(img);
-        }else if(m.kind==='video'){
-          const v=document.createElement('video'); v.src=url; v.controls=true; v.preload='metadata'; fig.appendChild(v);
-        }else if(m.kind==='audio'){
-          const a=document.createElement('audio'); a.src=url; a.controls=true; a.style.width='100%'; a.style.padding='10px'; fig.appendChild(a);
-        }else{
-          const link=document.createElement('a'); link.className='file-link'; link.href=url; link.download=m.name||'file';
-          link.innerHTML=`<svg viewBox="0 0 24 24"><path d="M14 3v5h5"/><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg><span>${m.name||'附件'}</span>`;
-          fig.appendChild(link);
-        }
-        wrap.appendChild(fig);
-      });
-      el.appendChild(wrap);
+      const visuals = p.media.filter(m=> m.kind==='image' || m.kind==='video');
+      const others  = p.media.filter(m=> m.kind!=='image' && m.kind!=='video');
+
+      // 圖片＋影片：橫向底片條，可左右滑動瀏覽
+      if(visuals.length){
+        const wrap = document.createElement('div');
+        wrap.className = 'post-media' + (visuals.length===1 ? ' single':'');
+        const imgUrls = [];   // 同一則的所有圖片，供相簿式左右瀏覽
+        visuals.forEach(m=>{
+          const fig = document.createElement('figure');
+          const url = objURL(m.blob);
+          if(m.kind==='image'){
+            const idx = imgUrls.length; imgUrls.push(url);
+            const img=document.createElement('img'); img.src=url; img.alt=m.name||''; img.loading='lazy';
+            img.onclick=()=>openLightbox(imgUrls, idx); fig.appendChild(img);
+          }else{ // video
+            const v=document.createElement('video'); v.src=url; v.controls=true; v.preload='metadata'; v.playsInline=true; fig.appendChild(v);
+          }
+          wrap.appendChild(fig);
+        });
+        el.appendChild(wrap);
+      }
+
+      // 音檔與其他檔案：縱向列出
+      if(others.length){
+        const fwrap = document.createElement('div'); fwrap.className='post-files';
+        others.forEach(m=>{
+          const url = objURL(m.blob);
+          if(m.kind==='audio'){
+            const a=document.createElement('audio'); a.src=url; a.controls=true; fwrap.appendChild(a);
+          }else{
+            const link=document.createElement('a'); link.className='file-link'; link.href=url; link.download=m.name||'file';
+            link.innerHTML=`<svg viewBox="0 0 24 24"><path d="M14 3v5h5"/><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg><span>${m.name||'附件'}</span>`;
+            fwrap.appendChild(link);
+          }
+        });
+        el.appendChild(fwrap);
+      }
     }
     // 操作
     el.querySelector('[data-act="edit"]').onclick = ()=>startEdit(p.id);
