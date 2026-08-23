@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>心映隨筆 · 日常紀錄</title>
+<meta name="description" content="安靜的個人隨筆與多媒體紀錄，資料只存在你的瀏覽器裡。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Noto+Serif+TC:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#EDECEA;
+    --surface:#FAF9F6;
+    --surface-2:#F1EFEB;
+    --ink:#2B2A2E;
+    --muted:#787580;
+    --faint:#AAA6B0;
+    --line:#E2DFD9;
+    --accent:#6E6FA0;
+    --accent-ink:#585990;
+    --accent-soft:rgba(110,111,160,.12);
+    --shadow:0 1px 2px rgba(40,38,50,.04), 0 8px 26px rgba(40,38,50,.06);
+    --shadow-lift:0 2px 6px rgba(40,38,50,.06), 0 14px 40px rgba(40,38,50,.10);
+    --serif:'Noto Serif TC','Songti TC',serif;
+    --sans:'Noto Sans TC',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --r:16px;
+    --r-sm:11px;
+  }
+  [data-theme="dark"]{
+    --bg:#141520;
+    --surface:#1D1E2A;
+    --surface-2:#23242F;
+    --ink:#E9E7EE;
+    --muted:#9895A6;
+    --faint:#6C697C;
+    --line:#2C2D3B;
+    --accent:#A2A3DC;
+    --accent-ink:#BCBDEC;
+    --accent-soft:rgba(162,163,220,.15);
+    --shadow:0 1px 2px rgba(0,0,0,.25), 0 10px 30px rgba(0,0,0,.35);
+    --shadow-lift:0 2px 6px rgba(0,0,0,.3), 0 16px 44px rgba(0,0,0,.45);
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:var(--sans);line-height:1.7;
+    -webkit-font-smoothing:antialiased;
+    transition:background .5s ease,color .5s ease;
+    min-height:100vh;
+  }
+  ::selection{background:var(--accent-soft);}
+  a{color:var(--accent-ink);}
+
+  .wrap{max-width:720px;margin:0 auto;padding:0 20px 120px;}
+
+  /* ---------- Header ---------- */
+  header.topbar{
+    position:sticky;top:0;z-index:40;
+    background:color-mix(in srgb,var(--bg) 82%,transparent);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--line);
+  }
+  .topbar-inner{
+    max-width:720px;margin:0 auto;padding:14px 20px;
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+  }
+  .brand{position:relative;display:flex;flex-direction:column;line-height:1;user-select:none;}
+  .brand-name{
+    font-family:var(--serif);font-weight:500;font-size:1.28rem;letter-spacing:.14em;
+    color:var(--ink);
+  }
+  .brand-name .dot{color:var(--accent);}
+  .brand-reflect{
+    font-family:var(--serif);font-weight:500;font-size:1.28rem;letter-spacing:.14em;
+    color:var(--accent);position:absolute;top:1.15em;left:0;
+    transform:scaleY(-1);opacity:.16;pointer-events:none;
+    -webkit-mask-image:linear-gradient(to bottom,#000,transparent 70%);
+    mask-image:linear-gradient(to bottom,#000,transparent 70%);
+  }
+  .brand-sub{
+    font-size:.62rem;letter-spacing:.28em;color:var(--faint);margin-top:.5em;
+    text-transform:uppercase;
+  }
+  .toolbtns{display:flex;gap:6px;align-items:center;}
+  .iconbtn{
+    display:grid;place-items:center;width:38px;height:38px;border-radius:10px;
+    border:1px solid var(--line);background:var(--surface);color:var(--muted);
+    cursor:pointer;transition:.18s;flex-shrink:0;
+  }
+  .iconbtn:hover{color:var(--accent-ink);border-color:var(--accent);transform:translateY(-1px);}
+  .iconbtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+  .iconbtn:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{
+    outline:2px solid var(--accent);outline-offset:2px;
+  }
+
+  /* ---------- Composer ---------- */
+  .composer{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+    box-shadow:var(--shadow);margin-top:26px;overflow:hidden;
+  }
+  .tabs{display:flex;gap:2px;padding:10px 12px 0;}
+  .tab{
+    font-size:.82rem;color:var(--muted);background:none;border:none;cursor:pointer;
+    padding:7px 14px;border-radius:9px 9px 0 0;font-family:var(--sans);transition:.15s;
+  }
+  .tab.active{color:var(--accent-ink);background:var(--surface-2);font-weight:500;}
+  .tab:hover:not(.active){color:var(--ink);}
+
+  .composer-body{padding:6px 18px 4px;}
+  textarea#editor{
+    width:100%;border:none;background:transparent;resize:none;outline:none;
+    font-family:var(--serif);font-size:1.06rem;line-height:1.8;color:var(--ink);
+    min-height:104px;padding:12px 0 4px;
+  }
+  textarea#editor::placeholder{color:var(--faint);}
+  #preview{
+    min-height:104px;padding:12px 0 4px;font-family:var(--serif);font-size:1.06rem;
+    line-height:1.85;color:var(--ink);display:none;
+  }
+  #preview.empty{color:var(--faint);}
+
+  .media-strip{display:flex;flex-wrap:wrap;gap:10px;padding:2px 0 8px;}
+  .media-thumb{
+    position:relative;width:88px;height:88px;border-radius:var(--r-sm);overflow:hidden;
+    border:1px solid var(--line);background:var(--surface-2);flex-shrink:0;
+  }
+  .media-thumb img,.media-thumb video{width:100%;height:100%;object-fit:cover;display:block;}
+  .media-thumb .file-badge{
+    width:100%;height:100%;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:5px;padding:6px;text-align:center;color:var(--muted);
+  }
+  .media-thumb .file-badge span{font-size:.58rem;line-height:1.25;word-break:break-all;max-height:2.5em;overflow:hidden;}
+  .media-thumb .rm{
+    position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;
+    background:rgba(20,20,30,.62);color:#fff;border:none;cursor:pointer;display:grid;
+    place-items:center;font-size:13px;line-height:1;backdrop-filter:blur(4px);
+  }
+  .media-thumb .rm:hover{background:rgba(20,20,30,.85);}
+
+  .composer-foot{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:10px 18px 16px;border-top:1px solid var(--line);margin-top:6px;
+  }
+  .foot-left{display:flex;align-items:center;gap:6px;}
+  .attach{
+    display:inline-grid;place-items:center;width:38px;height:38px;border-radius:10px;
+    border:1px solid var(--line);background:var(--surface-2);color:var(--muted);cursor:pointer;transition:.16s;
+  }
+  .attach:hover{color:var(--accent-ink);border-color:var(--accent);}
+  .attach svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+  .draft-note{font-size:.72rem;color:var(--faint);letter-spacing:.02em;transition:.3s;}
+  .draft-note b{color:var(--accent-ink);font-weight:500;}
+
+  .btn-primary{
+    font-family:var(--sans);font-size:.9rem;font-weight:500;letter-spacing:.05em;
+    color:#fff;background:var(--accent);border:none;border-radius:11px;
+    padding:10px 24px;cursor:pointer;transition:.18s;box-shadow:0 4px 14px var(--accent-soft);
+  }
+  [data-theme="dark"] .btn-primary{color:#16171f;}
+  .btn-primary:hover{background:var(--accent-ink);transform:translateY(-1px);}
+  .btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none;}
+  .btn-ghost{
+    font-family:var(--sans);font-size:.82rem;color:var(--muted);background:none;
+    border:1px solid var(--line);border-radius:10px;padding:8px 14px;cursor:pointer;transition:.16s;
+  }
+  .btn-ghost:hover{color:var(--accent-ink);border-color:var(--accent);}
+
+  /* ---------- Filter ---------- */
+  .filterbar{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    margin:30px 2px 8px;
+  }
+  .filterbar .fb-label{font-size:.72rem;letter-spacing:.24em;color:var(--faint);text-transform:uppercase;}
+  .filterbar input[type="date"],.filterbar select{
+    font-family:var(--sans);font-size:.82rem;color:var(--ink);background:var(--surface);
+    border:1px solid var(--line);border-radius:10px;padding:8px 11px;cursor:pointer;
+    transition:.16s;color-scheme:light;
+  }
+  [data-theme="dark"] .filterbar input[type="date"],[data-theme="dark"] .filterbar select{color-scheme:dark;}
+  .filterbar input[type="date"]:hover,.filterbar select:hover{border-color:var(--accent);}
+  .filter-count{font-size:.74rem;color:var(--muted);margin-left:auto;}
+
+  /* ---------- Feed timeline ---------- */
+  .feed{position:relative;margin-top:22px;padding-left:26px;}
+  .feed::before{
+    content:"";position:absolute;left:5px;top:8px;bottom:8px;width:2px;
+    background:linear-gradient(to bottom,var(--line),var(--line) 88%,transparent);
+  }
+  .post{
+    position:relative;background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--r);box-shadow:var(--shadow);padding:20px 22px;margin-bottom:22px;
+    transition:box-shadow .25s,transform .25s,border-color .25s;
+    animation:rise .45s cubic-bezier(.2,.7,.3,1) both;
+  }
+  @keyframes rise{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+  .post:hover{box-shadow:var(--shadow-lift);transform:translateY(-2px);border-color:color-mix(in srgb,var(--accent) 40%,var(--line));}
+  .post::before{
+    content:"";position:absolute;left:-25px;top:26px;width:11px;height:11px;border-radius:50%;
+    background:var(--surface);border:2.5px solid var(--accent);box-shadow:0 0 0 4px var(--bg);
+  }
+  .post-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;}
+  .post-date{font-size:.78rem;color:var(--muted);letter-spacing:.02em;display:flex;align-items:baseline;gap:8px;}
+  .post-date .time{color:var(--faint);font-variant-numeric:tabular-nums;}
+  .post-actions{display:flex;gap:4px;opacity:0;transition:.2s;}
+  .post:hover .post-actions{opacity:1;}
+  .post-actions button{
+    background:none;border:none;color:var(--faint);cursor:pointer;padding:5px;border-radius:7px;
+    display:grid;place-items:center;transition:.15s;
+  }
+  .post-actions button:hover{color:var(--accent-ink);background:var(--surface-2);}
+  .post-actions svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+
+  .post-body{font-family:var(--serif);font-size:1.04rem;line-height:1.85;color:var(--ink);word-break:break-word;}
+  .post-body p{margin:0 0 .8em;}
+  .post-body p:last-child{margin-bottom:0;}
+  .post-body h3,.post-body h4,.post-body h5,.post-body h6{font-weight:600;margin:1em 0 .5em;line-height:1.4;}
+  .post-body h3{font-size:1.18rem;}
+  .post-body h4{font-size:1.06rem;}
+  .post-body h5,.post-body h6{font-size:.98rem;}
+  .post-body a{text-decoration:underline;text-underline-offset:2px;text-decoration-color:var(--accent-soft);}
+  .post-body code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;background:var(--surface-2);padding:.12em .4em;border-radius:5px;}
+  .post-body pre{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;overflow:auto;margin:.6em 0;}
+  .post-body pre code{background:none;padding:0;font-size:.85em;}
+  .post-body blockquote{margin:.6em 0;padding:.2em 0 .2em 14px;border-left:3px solid var(--accent);color:var(--muted);font-style:italic;}
+  .post-body ul,.post-body ol{margin:.4em 0 .8em;padding-left:1.4em;}
+  .post-body li{margin:.2em 0;}
+  .post-body hr{border:none;border-top:1px solid var(--line);margin:1em 0;}
+
+  .post-media{display:grid;gap:8px;margin-top:14px;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));}
+  .post-media.single{grid-template-columns:1fr;}
+  .post-media figure{margin:0;border-radius:var(--r-sm);overflow:hidden;border:1px solid var(--line);background:var(--surface-2);}
+  .post-media img{width:100%;display:block;cursor:zoom-in;max-height:520px;object-fit:cover;}
+  .post-media.single img{object-fit:contain;background:var(--surface-2);}
+  .post-media video{width:100%;display:block;max-height:520px;background:#000;}
+  .post-media .file-link{
+    display:flex;align-items:center;gap:10px;padding:12px 14px;color:var(--ink);text-decoration:none;font-size:.85rem;
+  }
+  .post-media .file-link:hover{background:var(--surface-2);}
+  .post-media .file-link svg{width:22px;height:22px;stroke:var(--accent);fill:none;stroke-width:1.6;flex-shrink:0;}
+
+  /* ---------- Empty ---------- */
+  .empty-state{text-align:center;padding:70px 20px;color:var(--faint);}
+  .empty-state .glyph{font-family:var(--serif);font-size:2.6rem;color:var(--accent);opacity:.55;margin-bottom:14px;}
+  .empty-state p{margin:.3em 0;font-size:.92rem;}
+  .empty-state .sub{font-size:.8rem;color:var(--faint);}
+
+  /* ---------- Lightbox ---------- */
+  .lightbox{
+    position:fixed;inset:0;z-index:80;background:rgba(12,12,18,.86);
+    display:none;align-items:center;justify-content:center;padding:30px;cursor:zoom-out;
+    backdrop-filter:blur(6px);
+  }
+  .lightbox.show{display:flex;animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0;}to{opacity:1;}}
+  .lightbox img{max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.5);}
+
+  /* ---------- Toast ---------- */
+  .toast{
+    position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:var(--bg);font-size:.84rem;padding:11px 20px;border-radius:12px;
+    box-shadow:var(--shadow-lift);z-index:90;opacity:0;pointer-events:none;transition:.3s;letter-spacing:.03em;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  @media(max-width:560px){
+    .wrap{padding:0 14px 100px;}
+    .topbar-inner{padding:12px 14px;}
+    .filter-count{width:100%;margin-left:0;order:5;}
+    .composer-foot{flex-wrap:wrap;}
+  }
+  @media(prefers-reduced-motion:reduce){
+    *{animation:none !important;transition:none !important;scroll-behavior:auto !important;}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="brand-name">心映隨筆<span class="dot">·</span></div>
+      <div class="brand-reflect" aria-hidden="true">心映隨筆·</div>
+      <div class="brand-sub">Daily Journal</div>
+    </div>
+    <div class="toolbtns">
+      <button class="iconbtn" id="importBtn" title="匯入備份" aria-label="匯入備份">
+        <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M8 11l4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+      </button>
+      <button class="iconbtn" id="exportBtn" title="匯出全部備份" aria-label="匯出備份">
+        <svg viewBox="0 0 24 24"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+      </button>
+      <button class="iconbtn" id="themeBtn" title="切換深／淺色" aria-label="切換主題">
+        <svg id="themeIcon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- Composer -->
+  <section class="composer" aria-label="撰寫隨筆">
+    <div class="tabs">
+      <button class="tab active" data-tab="write" id="tabWrite">撰寫</button>
+      <button class="tab" data-tab="preview" id="tabPreview">預覽</button>
+    </div>
+    <div class="composer-body">
+      <textarea id="editor" placeholder="此刻，想留下些什麼？&#10;&#10;支援 Markdown：**粗體**、*斜體*、# 標題、- 清單、&gt; 引言…"></textarea>
+      <div id="preview" class="empty"></div>
+      <div class="media-strip" id="mediaStrip"></div>
+    </div>
+    <div class="composer-foot">
+      <div class="foot-left">
+        <label class="attach" title="加入圖片／影片／檔案">
+          <input type="file" id="fileInput" accept="image/*,video/*,audio/*,.pdf,.txt,.md" multiple hidden>
+          <svg viewBox="0 0 24 24"><path d="M21.4 11.05 12.25 20.2a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-9.2 9.19a1 1 0 0 1-1.41-1.41l8.48-8.49"/></svg>
+        </label>
+        <span class="draft-note" id="draftNote"></span>
+      </div>
+      <button class="btn-primary" id="publishBtn" disabled>發布</button>
+    </div>
+  </section>
+
+  <!-- Filter -->
+  <div class="filterbar">
+    <span class="fb-label">篩選</span>
+    <input type="date" id="dateFilter" aria-label="依日期篩選">
+    <select id="monthFilter" aria-label="依年月篩選"><option value="">整個月份…</option></select>
+    <button class="btn-ghost" id="clearFilter" style="display:none;">清除篩選 · 返回全部</button>
+    <span class="filter-count" id="filterCount"></span>
+  </div>
+
+  <!-- Feed -->
+  <section class="feed" id="feed" aria-live="polite"></section>
+
+</main>
+
+<input type="file" id="importInput" accept="application/json,.json" hidden>
+<div class="lightbox" id="lightbox"><img id="lightboxImg" alt="放大檢視"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* =========================================================
+   心映隨筆 — 純前端 · IndexedDB 儲存 · GitHub Pages 可部署
+   ========================================================= */
+
+const DB_NAME = 'xinying_journal_db';
+const DB_VER  = 1;
+const LS_THEME = 'xy_theme';
+const LS_DRAFT_TEXT = 'xy_draft_text';   // localStorage 即時暫存草稿文字
+let db;
+
+/* ---------- 小工具 ---------- */
+const $  = (s)=>document.querySelector(s);
+const uid = ()=> Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+const liveUrls = new Set();
+function objURL(blob){ const u = URL.createObjectURL(blob); liveUrls.add(u); return u; }
+function revokeFeedUrls(){ liveUrls.forEach(u=>URL.revokeObjectURL(u)); liveUrls.clear(); }
+
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._t); t._t = setTimeout(()=>t.classList.remove('show'), 2600);
+}
+
+/* ---------- IndexedDB ---------- */
+function openDB(){
+  return new Promise((res,rej)=>{
+    const r = indexedDB.open(DB_NAME, DB_VER);
+    r.onupgradeneeded = e=>{
+      const d = e.target.result;
+      if(!d.objectStoreNames.contains('posts')) d.createObjectStore('posts',{keyPath:'id'});
+      if(!d.objectStoreNames.contains('draft')) d.createObjectStore('draft',{keyPath:'key'});
+    };
+    r.onsuccess = e=>res(e.target.result);
+    r.onerror   = e=>rej(e.target.error);
+  });
+}
+function store(name,mode){ return db.transaction(name,mode).objectStore(name); }
+function getAllPosts(){
+  return new Promise((res,rej)=>{ const q=store('posts','readonly').getAll(); q.onsuccess=()=>res(q.result||[]); q.onerror=()=>rej(q.error); });
+}
+function putPost(p){
+  return new Promise((res,rej)=>{ const q=store('posts','readwrite').put(p); q.onsuccess=()=>res(); q.onerror=()=>rej(q.error); });
+}
+function deletePost(id){
+  return new Promise((res,rej)=>{ const q=store('posts','readwrite').delete(id); q.onsuccess=()=>res(); q.onerror=()=>rej(q.error); });
+}
+function getPost(id){
+  return new Promise((res,rej)=>{ const q=store('posts','readonly').get(id); q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); });
+}
+function saveDraftDB(obj){
+  return new Promise((res,rej)=>{ const q=store('draft','readwrite').put({key:'current',...obj}); q.onsuccess=()=>res(); q.onerror=()=>rej(q.error); });
+}
+function getDraftDB(){
+  return new Promise((res,rej)=>{ const q=store('draft','readonly').get('current'); q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); });
+}
+function clearDraftDB(){
+  return new Promise((res,rej)=>{ const q=store('draft','readwrite').delete('current'); q.onsuccess=()=>res(); q.onerror=()=>rej(q.error); });
+}
+
+/* ---------- Markdown（輕量安全解析） ---------- */
+function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function mdInline(s){
+  s = s.replace(/`([^`]+)`/g, (m,c)=>`<code>${c}</code>`);
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/(^|[^*])\*([^*\s][^*]*?)\*/g, '$1<em>$2</em>');
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  return s;
+}
+function mdToHtml(src){
+  const lines = escapeHtml(src.replace(/\r\n/g,'\n')).split('\n');
+  let html='', para=[], listType=null, listItems=[], inCode=false, codeBuf=[];
+  const flushPara = ()=>{ if(para.length){ html += '<p>'+para.map(mdInline).join('<br>')+'</p>'; para=[]; } };
+  const flushList = ()=>{ if(listType){ html += `<${listType}>`+listItems.map(li=>`<li>${mdInline(li)}</li>`).join('')+`</${listType}>`; listType=null; listItems=[]; } };
+  for(const raw of lines){
+    if(/^```/.test(raw)){
+      if(inCode){ html += '<pre><code>'+codeBuf.join('\n')+'</code></pre>'; codeBuf=[]; inCode=false; }
+      else { flushPara(); flushList(); inCode=true; }
+      continue;
+    }
+    if(inCode){ codeBuf.push(raw); continue; }
+    if(/^\s*$/.test(raw)){ flushPara(); flushList(); continue; }
+    let h = raw.match(/^(#{1,4})\s+(.*)$/);
+    if(h){ flushPara(); flushList(); const lv=Math.min(h[1].length+2,6); html+=`<h${lv}>${mdInline(h[2])}</h${lv}>`; continue; }
+    if(/^\s*&gt;\s?/.test(raw)){ flushPara(); flushList(); html+='<blockquote>'+mdInline(raw.replace(/^\s*&gt;\s?/,''))+'</blockquote>'; continue; }
+    if(/^\s*([-*])\s+/.test(raw)){ flushPara(); if(listType!=='ul'){ flushList(); listType='ul'; } listItems.push(raw.replace(/^\s*[-*]\s+/,'')); continue; }
+    if(/^\s*\d+\.\s+/.test(raw)){ flushPara(); if(listType!=='ol'){ flushList(); listType='ol'; } listItems.push(raw.replace(/^\s*\d+\.\s+/,'')); continue; }
+    if(/^\s*(-{3,}|\*{3,})\s*$/.test(raw)){ flushPara(); flushList(); html+='<hr>'; continue; }
+    para.push(raw);
+  }
+  flushPara(); flushList(); if(inCode){ html += '<pre><code>'+codeBuf.join('\n')+'</code></pre>'; }
+  return html;
+}
+
+/* ---------- 日期格式 ---------- */
+function fmtDate(ts){
+  const d = new Date(ts);
+  const pad = n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}年${pad(d.getMonth()+1)}月${pad(d.getDate())}日`;
+}
+function fmtTime(ts){
+  const d = new Date(ts); const pad=n=>String(n).padStart(2,'0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function relTime(ts){
+  const diff = (Date.now()-ts)/1000;
+  if(diff < 60) return '剛剛';
+  if(diff < 3600) return Math.floor(diff/60)+' 分鐘前';
+  if(diff < 86400) return Math.floor(diff/3600)+' 小時前';
+  if(diff < 86400*7) return Math.floor(diff/86400)+' 天前';
+  return '';
+}
+function ymKey(ts){ const d=new Date(ts); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+function dayKey(ts){ const d=new Date(ts); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+
+/* ---------- 媒體分類 ---------- */
+function kindOf(type){
+  if(type.startsWith('image/')) return 'image';
+  if(type.startsWith('video/')) return 'video';
+  if(type.startsWith('audio/')) return 'audio';
+  return 'file';
+}
+
+/* =========================================================
+   撰寫器狀態
+   ========================================================= */
+let editorMedia = [];   // [{id,name,type,kind,blob}]
+let editingId = null;   // 若正在編輯既有貼文
+const editorUrls = new Set();
+function editorURL(blob){ const u=URL.createObjectURL(blob); editorUrls.add(u); return u; }
+function clearEditorUrls(){ editorUrls.forEach(u=>URL.revokeObjectURL(u)); editorUrls.clear(); }
+
+const editor = $('#editor');
+const publishBtn = $('#publishBtn');
+
+function autoGrow(){ editor.style.height='auto'; editor.style.height = Math.max(104, editor.scrollHeight)+'px'; }
+
+function renderMediaStrip(){
+  const strip = $('#mediaStrip'); strip.innerHTML='';
+  clearEditorUrls();
+  editorMedia.forEach(m=>{
+    const div = document.createElement('div'); div.className='media-thumb';
+    if(m.kind==='image'){ div.innerHTML = `<img src="${editorURL(m.blob)}" alt="">`; }
+    else if(m.kind==='video'){ div.innerHTML = `<video src="${editorURL(m.blob)}" muted></video>`; }
+    else { div.innerHTML = `<div class="file-badge"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 3v5h5"/><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg><span>${m.name}</span></div>`; }
+    const rm = document.createElement('button'); rm.className='rm'; rm.innerHTML='×'; rm.title='移除';
+    rm.onclick=()=>{ editorMedia=editorMedia.filter(x=>x.id!==m.id); renderMediaStrip(); updatePublishState(); scheduleDraftSave(); };
+    div.appendChild(rm); strip.appendChild(div);
+  });
+}
+
+function updatePublishState(){
+  const has = editor.value.trim().length>0 || editorMedia.length>0;
+  publishBtn.disabled = !has;
+  publishBtn.textContent = editingId ? '儲存修改' : '發布';
+}
+
+/* ---------- 草稿自動暫存 ---------- */
+let draftTimer;
+function scheduleDraftSave(){
+  clearTimeout(draftTimer);
+  draftTimer = setTimeout(saveDraftNow, 400);
+  // localStorage 即時鏡射文字（滿足「即時寫入」）
+  try{ localStorage.setItem(LS_DRAFT_TEXT, editor.value); }catch(e){}
+}
+async function saveDraftNow(){
+  if(editingId) return; // 編輯既有貼文時不覆寫草稿
+  const content = editor.value;
+  if(!content.trim() && editorMedia.length===0){ await clearDraftDB(); showDraftNote(''); return; }
+  await saveDraftDB({ content, media: editorMedia.map(m=>({id:m.id,name:m.name,type:m.type,kind:m.kind,blob:m.blob})), updatedAt:Date.now() });
+  showDraftNote(`草稿已暫存 · ${fmtTime(Date.now())}`);
+}
+function showDraftNote(txt){ const n=$('#draftNote'); n.innerHTML = txt ? `<b>●</b> ${txt}` : ''; }
+
+async function restoreDraft(){
+  const d = await getDraftDB();
+  if(d && (d.content?.trim() || (d.media&&d.media.length))){
+    editor.value = d.content||'';
+    editorMedia = (d.media||[]).map(m=>({...m}));
+    renderMediaStrip(); autoGrow(); updatePublishState();
+    showDraftNote('已回復上次未發布的草稿');
+  }
+}
+
+/* ---------- 發布 / 儲存修改 ---------- */
+async function publish(){
+  const content = editor.value.trim();
+  if(!content && editorMedia.length===0) return;
+  const media = editorMedia.map(m=>({id:m.id,name:m.name,type:m.type,kind:m.kind,blob:m.blob}));
+  if(editingId){
+    const existing = await getPost(editingId);
+    const updated = { ...existing, content, media, updatedAt:Date.now() };
+    await putPost(updated);
+    toast('已儲存修改');
+  }else{
+    await putPost({ id:uid(), content, media, createdAt:Date.now(), updatedAt:Date.now() });
+    toast('已發布');
+  }
+  // 清空撰寫器與草稿
+  editor.value=''; editorMedia=[]; editingId=null;
+  renderMediaStrip(); autoGrow(); updatePublishState(); showDraftNote('');
+  await clearDraftDB(); try{ localStorage.removeItem(LS_DRAFT_TEXT); }catch(e){}
+  switchTab('write');
+  await renderFeed();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ---------- 編輯既有貼文 ---------- */
+async function startEdit(id){
+  const p = await getPost(id); if(!p) return;
+  editingId = id;
+  editor.value = p.content||'';
+  editorMedia = (p.media||[]).map(m=>({...m}));
+  renderMediaStrip(); autoGrow(); updatePublishState(); switchTab('write');
+  showDraftNote('正在編輯這則紀錄');
+  document.querySelector('.composer').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+/* =========================================================
+   Feed 渲染
+   ========================================================= */
+let filterMode = 'all';   // 'all' | 'day' | 'month'
+let filterValue = '';
+
+async function renderFeed(){
+  revokeFeedUrls();
+  const feed = $('#feed');
+  let posts = await getAllPosts();
+  posts.sort((a,b)=> b.createdAt - a.createdAt);
+  rebuildMonthOptions(posts);
+
+  let shown = posts;
+  if(filterMode==='day')   shown = posts.filter(p=>dayKey(p.createdAt)===filterValue);
+  if(filterMode==='month') shown = posts.filter(p=>ymKey(p.createdAt)===filterValue);
+
+  $('#filterCount').textContent = (filterMode==='all')
+    ? (posts.length ? `共 ${posts.length} 則紀錄` : '')
+    : `符合 ${shown.length} 則`;
+  $('#clearFilter').style.display = (filterMode==='all') ? 'none' : '';
+
+  if(shown.length===0){
+    feed.innerHTML = `<div class="empty-state">
+      <div class="glyph">${posts.length? '⟡':'❋'}</div>
+      <p>${posts.length? '這段時間還沒有紀錄':'還沒有任何隨筆'}</p>
+      <p class="sub">${posts.length? '換個日期，或清除篩選看看全部':'在上方寫下第一則，讓時間開始流動'}</p>
+    </div>`;
+    return;
+  }
+
+  feed.innerHTML='';
+  shown.forEach(p=>{
+    const el = document.createElement('article'); el.className='post';
+    const rel = relTime(p.createdAt);
+    el.innerHTML = `
+      <div class="post-head">
+        <div class="post-date">
+          <span>${fmtDate(p.createdAt)}</span>
+          <span class="time">${fmtTime(p.createdAt)}${rel? ' · '+rel:''}</span>
+        </div>
+        <div class="post-actions">
+          <button data-act="edit" title="編輯"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+          <button data-act="del" title="刪除"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+        </div>
+      </div>
+      ${p.content ? `<div class="post-body">${mdToHtml(p.content)}</div>` : ''}
+    `;
+    // 媒體
+    if(p.media && p.media.length){
+      const wrap = document.createElement('div');
+      wrap.className = 'post-media' + (p.media.length===1 ? ' single':'');
+      p.media.forEach(m=>{
+        const fig = document.createElement('figure');
+        const url = objURL(m.blob);
+        if(m.kind==='image'){
+          const img=document.createElement('img'); img.src=url; img.alt=m.name||''; img.loading='lazy';
+          img.onclick=()=>openLightbox(url); fig.appendChild(img);
+        }else if(m.kind==='video'){
+          const v=document.createElement('video'); v.src=url; v.controls=true; v.preload='metadata'; fig.appendChild(v);
+        }else if(m.kind==='audio'){
+          const a=document.createElement('audio'); a.src=url; a.controls=true; a.style.width='100%'; a.style.padding='10px'; fig.appendChild(a);
+        }else{
+          const link=document.createElement('a'); link.className='file-link'; link.href=url; link.download=m.name||'file';
+          link.innerHTML=`<svg viewBox="0 0 24 24"><path d="M14 3v5h5"/><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg><span>${m.name||'附件'}</span>`;
+          fig.appendChild(link);
+        }
+        wrap.appendChild(fig);
+      });
+      el.appendChild(wrap);
+    }
+    // 操作
+    el.querySelector('[data-act="edit"]').onclick = ()=>startEdit(p.id);
+    el.querySelector('[data-act="del"]').onclick = async ()=>{
+      if(confirm('確定要刪除這則紀錄嗎？此動作無法復原。')){
+        await deletePost(p.id); toast('已刪除'); await renderFeed();
+      }
+    };
+    feed.appendChild(el);
+  });
+}
+
+function rebuildMonthOptions(posts){
+  const sel = $('#monthFilter');
+  const cur = sel.value;
+  const months = [...new Set(posts.map(p=>ymKey(p.createdAt)))].sort().reverse();
+  sel.innerHTML = '<option value="">整個月份…</option>' +
+    months.map(m=>{ const [y,mo]=m.split('-'); return `<option value="${m}">${y} 年 ${mo} 月</option>`; }).join('');
+  if(months.includes(cur)) sel.value = cur;
+}
+
+/* ---------- Lightbox ---------- */
+function openLightbox(url){ $('#lightboxImg').src=url; $('#lightbox').classList.add('show'); }
+$('#lightbox').onclick=()=>$('#lightbox').classList.remove('show');
+
+/* =========================================================
+   匯出 / 匯入
+   ========================================================= */
+function blobToDataURL(blob){
+  return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(blob); });
+}
+function dataURLtoBlob(dataURL){
+  const [meta,b64] = dataURL.split(',');
+  const mime = (meta.match(/data:([^;]+)/)||[])[1] || 'application/octet-stream';
+  const bin = atob(b64); const arr = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+  return new Blob([arr],{type:mime});
+}
+async function exportData(){
+  const posts = await getAllPosts();
+  if(posts.length===0){ toast('目前沒有可匯出的資料'); return; }
+  toast('正在打包備份…');
+  const out=[];
+  for(const p of posts){
+    const media=[];
+    for(const m of (p.media||[])){
+      media.push({ id:m.id, name:m.name, type:m.type, kind:m.kind, data: await blobToDataURL(m.blob) });
+    }
+    out.push({ id:p.id, content:p.content, createdAt:p.createdAt, updatedAt:p.updatedAt, media });
+  }
+  const payload = { app:'心映隨筆', schema:1, exportedAt:Date.now(), count:out.length, posts:out };
+  const blob = new Blob([JSON.stringify(payload)], {type:'application/json'});
+  const a=document.createElement('a');
+  const d=new Date(); const pad=n=>String(n).padStart(2,'0');
+  a.download = `心映隨筆_備份_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.json`;
+  a.href = URL.createObjectURL(blob); a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+  toast(`已匯出 ${out.length} 則紀錄`);
+}
+async function importData(file){
+  try{
+    const text = await file.text();
+    const data = JSON.parse(text);
+    const posts = data.posts || (Array.isArray(data)? data : null);
+    if(!posts) throw new Error('格式不符');
+    const existing = new Set((await getAllPosts()).map(p=>p.id));
+    let added=0;
+    for(const p of posts){
+      if(existing.has(p.id)) continue; // 跳過重複
+      const media = (p.media||[]).map(m=>({
+        id:m.id||uid(), name:m.name, type:m.type, kind:m.kind || kindOf(m.type||''),
+        blob: m.data ? dataURLtoBlob(m.data) : m.blob
+      }));
+      await putPost({ id:p.id||uid(), content:p.content||'', createdAt:p.createdAt||Date.now(), updatedAt:p.updatedAt||p.createdAt||Date.now(), media });
+      added++;
+    }
+    await renderFeed();
+    toast(added? `已匯入 ${added} 則紀錄`:'沒有新的紀錄（可能已存在）');
+  }catch(err){
+    console.error(err); toast('匯入失敗：檔案格式無法辨識');
+  }
+}
+
+/* =========================================================
+   主題
+   ========================================================= */
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme', t);
+  const icon = $('#themeIcon');
+  if(t==='dark'){ icon.innerHTML = '<circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.2M12 19.8V22M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2 12h2.2M19.8 12H22M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/>'; }
+  else{ icon.innerHTML = '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>'; }
+  try{ localStorage.setItem(LS_THEME, t); }catch(e){}
+}
+
+/* =========================================================
+   事件綁定
+   ========================================================= */
+function switchTab(which){
+  const write = which==='write';
+  $('#tabWrite').classList.toggle('active', write);
+  $('#tabPreview').classList.toggle('active', !write);
+  editor.style.display = write ? '' : 'none';
+  const pv = $('#preview'); pv.style.display = write ? 'none' : '';
+  if(!write){
+    const val = editor.value.trim();
+    pv.classList.toggle('empty', !val);
+    pv.innerHTML = val ? mdToHtml(editor.value) : '這裡會顯示 Markdown 預覽…';
+  }
+}
+
+function bindEvents(){
+  editor.addEventListener('input', ()=>{ autoGrow(); updatePublishState(); scheduleDraftSave(); });
+  $('#fileInput').addEventListener('change', e=>{
+    [...e.target.files].forEach(f=>{
+      editorMedia.push({ id:uid(), name:f.name, type:f.type||'application/octet-stream', kind:kindOf(f.type||''), blob:f });
+    });
+    e.target.value=''; renderMediaStrip(); updatePublishState(); scheduleDraftSave();
+  });
+  publishBtn.addEventListener('click', publish);
+  $('#tabWrite').addEventListener('click', ()=>switchTab('write'));
+  $('#tabPreview').addEventListener('click', ()=>switchTab('preview'));
+
+  $('#dateFilter').addEventListener('change', e=>{
+    if(e.target.value){ filterMode='day'; filterValue=e.target.value; $('#monthFilter').value=''; }
+    else { filterMode='all'; filterValue=''; }
+    renderFeed();
+  });
+  $('#monthFilter').addEventListener('change', e=>{
+    if(e.target.value){ filterMode='month'; filterValue=e.target.value; $('#dateFilter').value=''; }
+    else { filterMode='all'; filterValue=''; }
+    renderFeed();
+  });
+  $('#clearFilter').addEventListener('click', ()=>{
+    filterMode='all'; filterValue=''; $('#dateFilter').value=''; $('#monthFilter').value=''; renderFeed();
+  });
+
+  $('#exportBtn').addEventListener('click', exportData);
+  $('#importBtn').addEventListener('click', ()=>$('#importInput').click());
+  $('#importInput').addEventListener('change', e=>{ if(e.target.files[0]) importData(e.target.files[0]); e.target.value=''; });
+  $('#themeBtn').addEventListener('click', ()=>{
+    const now = document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+    applyTheme(now);
+  });
+  window.addEventListener('keydown', e=>{ if(e.key==='Escape') $('#lightbox').classList.remove('show'); });
+  // 離開前保存草稿
+  window.addEventListener('beforeunload', ()=>{ if(!editingId) saveDraftNow(); });
+}
+
+/* =========================================================
+   啟動
+   ========================================================= */
+(async function init(){
+  // 主題（優先讀取偏好，否則跟隨系統）
+  let t = null; try{ t = localStorage.getItem(LS_THEME); }catch(e){}
+  if(!t) t = window.matchMedia && window.matchMedia('(prefers-color-scheme:dark)').matches ? 'dark':'light';
+  applyTheme(t);
+
+  try{
+    db = await openDB();
+  }catch(err){
+    console.error(err);
+    document.querySelector('.wrap').innerHTML = '<p style="text-align:center;padding:60px 20px;color:var(--muted)">此瀏覽器無法使用本機儲存（IndexedDB），可能處於無痕模式。請改用一般視窗開啟。</p>';
+    return;
+  }
+
+  bindEvents();
+  autoGrow();
+  await restoreDraft();
+  updatePublishState();
+  await renderFeed();
+})();
+</script>
+</body>
+</html>
