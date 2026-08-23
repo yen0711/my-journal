@@ -1008,13 +1008,35 @@ async function exportData(){
   }
   const payload = { app:'心映隨筆', schema:1, exportedAt:Date.now(), count:out.length, posts:out };
   const blob = new Blob([JSON.stringify(payload)], {type:'application/json'});
-  const a=document.createElement('a');
   const d=new Date(); const pad=n=>String(n).padStart(2,'0');
-  a.download = `心映隨筆_備份_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.json`;
+  const fname = `心映隨筆_備份_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.json`;
+
+  const markDone = ()=>{
+    try{ localStorage.setItem(LS_LAST_BACKUP, String(Date.now())); localStorage.removeItem(LS_BACKUP_SNOOZE); }catch(e){}
+    $('#backupNote').hidden = true;
+  };
+
+  // 優先：手機原生「分享」— 可直接存到 iCloud 雲端硬碟，或傳給自己的 LINE／email
+  let file = null;
+  try{ file = new File([blob], fname, {type:'application/json'}); }catch(e){}
+  if(file && navigator.canShare && navigator.canShare({files:[file]})){
+    try{
+      await navigator.share({ files:[file], title:'心映隨筆備份', text:'心映隨筆 日記備份' });
+      markDone();
+      toast('已開啟分享，可存到 iCloud 或傳給自己');
+      return;
+    }catch(err){
+      if(err && err.name==='AbortError'){ toast('已取消備份'); return; }
+      // 其他狀況 → 改用下載
+    }
+  }
+
+  // 退回：直接下載檔案（電腦、或不支援分享的環境）
+  const a=document.createElement('a');
+  a.download = fname;
   a.href = URL.createObjectURL(blob); a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
-  try{ localStorage.setItem(LS_LAST_BACKUP, String(Date.now())); localStorage.removeItem(LS_BACKUP_SNOOZE); }catch(e){}
-  $('#backupNote').hidden = true;
+  markDone();
   toast(`已匯出 ${out.length} 則紀錄`);
 }
 
@@ -1028,8 +1050,8 @@ function updateBackupNote(count){
   const days = last ? Math.floor((Date.now()-last)/86400000) : -1;
   if(last && days < 14){ note.hidden = true; return; }
   $('#backupNoteText').textContent = last
-    ? `距離上次備份已 ${days} 天了，建議再匯出一份存到手機相簿或雲端硬碟。`
-    : `你的日記目前只存在這支手機裡。建議先匯出一份備份，換手機或清資料時才不會遺失。`;
+    ? `距離上次備份已 ${days} 天了，按一下就能存到 iCloud 或傳給自己。`
+    : `你的日記目前只存在這支手機裡。按「立即備份」可存到 iCloud 雲端硬碟，換手機也不怕遺失。`;
   note.hidden = false;
 }
 async function importData(file){
