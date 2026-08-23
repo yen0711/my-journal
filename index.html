@@ -96,6 +96,33 @@
     outline:2px solid var(--accent);outline-offset:2px;
   }
 
+  /* ---------- 頁面容器 ---------- */
+  .page{display:none;}
+  .page.active{display:block;animation:pagein .32s ease both;}
+  @keyframes pagein{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+
+  /* ---------- 撰寫浮動鈕（日記頁） ---------- */
+  .fab{
+    position:fixed;right:24px;bottom:26px;z-index:50;width:58px;height:58px;border-radius:50%;
+    border:none;background:var(--accent);color:#fff;cursor:pointer;
+    display:grid;place-items:center;transition:transform .25s,box-shadow .2s,opacity .25s;
+    box-shadow:0 8px 24px color-mix(in srgb,var(--accent) 45%,transparent);
+  }
+  .fab svg{width:25px;height:25px;stroke:#fff;fill:none;stroke-width:2.1;stroke-linecap:round;}
+  .fab:hover{transform:translateY(-2px) scale(1.05);}
+  .fab:active{transform:scale(.96);}
+  .fab.hidden{transform:translateY(150%);opacity:0;pointer-events:none;}
+
+  /* ---------- 撰寫頁：返回按鈕 ---------- */
+  #page-write .composer{margin-top:12px;}
+  .write-top{display:flex;align-items:center;margin-top:22px;}
+  .back-btn{
+    display:inline-flex;align-items:center;gap:3px;font-family:var(--sans);font-size:.88rem;
+    color:var(--muted);background:none;border:none;cursor:pointer;padding:6px 6px 6px 2px;border-radius:9px;transition:.15s;
+  }
+  .back-btn:hover{color:var(--accent-ink);}
+  .back-btn svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;}
+
   /* ---------- Composer ---------- */
   .composer{
     background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
@@ -182,6 +209,39 @@
   [data-theme="dark"] .filterbar input[type="date"],[data-theme="dark"] .filterbar select{color-scheme:dark;}
   .filterbar input[type="date"]:hover,.filterbar select:hover{border-color:var(--accent);}
   .filter-count{font-size:.74rem;color:var(--muted);margin-left:auto;}
+
+  /* ---------- 分類 ---------- */
+  .composer-cats{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:0 2px 2px;}
+  .composer-cats .cc-label{font-size:.7rem;letter-spacing:.2em;color:var(--faint);text-transform:uppercase;flex-shrink:0;}
+  .cat-choices{display:flex;gap:6px;flex-wrap:wrap;}
+  .cat-pill{
+    display:inline-flex;align-items:center;gap:6px;font-family:var(--sans);font-size:.76rem;line-height:1;
+    color:var(--muted);background:var(--surface);border:1px solid var(--line);
+    border-radius:999px;padding:5px 12px;cursor:pointer;transition:.15s;
+  }
+  .cat-pill i{width:8px;height:8px;border-radius:50%;background:var(--cc,var(--faint));flex-shrink:0;}
+  .cat-pill:hover{border-color:var(--cc,var(--accent));color:var(--ink);}
+  .cat-pill.on{color:var(--cc,var(--accent-ink));background:color-mix(in srgb,var(--cc,var(--accent)) 15%,var(--surface));border-color:var(--cc,var(--accent));}
+  .cat-pill.add{color:var(--faint);border-style:dashed;}
+  .cat-pill.add:hover{color:var(--accent-ink);border-color:var(--accent);}
+
+  .catbar{display:flex;gap:7px;flex-wrap:wrap;margin:12px 2px 0;}
+  .cat-chip{
+    display:inline-flex;align-items:center;gap:6px;font-size:.77rem;line-height:1;color:var(--muted);
+    background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 13px;
+    cursor:pointer;transition:.15s;
+  }
+  .cat-chip i{width:7px;height:7px;border-radius:50%;background:var(--cc,var(--faint));}
+  .cat-chip:hover{border-color:var(--cc,var(--accent));color:var(--ink);}
+  .cat-chip.on{color:var(--cc,var(--accent-ink));background:color-mix(in srgb,var(--cc,var(--accent)) 14%,var(--surface));border-color:var(--cc,var(--accent));font-weight:500;}
+
+  .post-head-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0;}
+  .post-cat{
+    display:inline-flex;align-items:center;gap:5px;font-size:.71rem;line-height:1;white-space:nowrap;
+    color:var(--cc,var(--muted));background:color-mix(in srgb,var(--cc,var(--accent)) 13%,transparent);
+    border-radius:999px;padding:3px 9px;
+  }
+  .post-cat i{width:6px;height:6px;border-radius:50%;background:var(--cc,var(--faint));}
 
   /* ---------- Feed timeline ---------- */
   .feed{position:relative;margin-top:22px;padding-left:26px;}
@@ -270,6 +330,7 @@
     .topbar-inner{padding:12px 14px;}
     .filter-count{width:100%;margin-left:0;order:5;}
     .composer-foot{flex-wrap:wrap;}
+    .fab{right:16px;bottom:18px;}
   }
   @media(prefers-reduced-motion:reduce){
     *{animation:none !important;transition:none !important;scroll-behavior:auto !important;}
@@ -280,7 +341,7 @@
 
 <header class="topbar">
   <div class="topbar-inner">
-    <div class="brand">
+    <div class="brand" id="brandHome" style="cursor:pointer" title="回到日記">
       <div class="brand-name">心映隨筆<span class="dot">·</span></div>
       <div class="brand-reflect" aria-hidden="true">心映隨筆·</div>
       <div class="brand-sub">Daily Journal</div>
@@ -301,16 +362,27 @@
 
 <main class="wrap">
 
+  <!-- ===== 撰寫頁 ===== -->
+  <section id="page-write" class="page">
+  <div class="write-top">
+    <button class="back-btn" id="backToJournal" aria-label="返回日記">
+      <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>返回日記
+    </button>
+  </div>
   <!-- Composer -->
   <section class="composer" aria-label="撰寫隨筆">
     <div class="tabs">
-      <button class="tab active" data-tab="write" id="tabWrite">撰寫</button>
+      <button class="tab active" data-tab="write" id="tabWrite">編輯</button>
       <button class="tab" data-tab="preview" id="tabPreview">預覽</button>
     </div>
     <div class="composer-body">
       <textarea id="editor" placeholder="此刻，想留下些什麼？&#10;&#10;支援 Markdown：**粗體**、*斜體*、# 標題、- 清單、&gt; 引言…"></textarea>
       <div id="preview" class="empty"></div>
       <div class="media-strip" id="mediaStrip"></div>
+    </div>
+    <div class="composer-cats">
+      <span class="cc-label">分類</span>
+      <div class="cat-choices" id="catChoices"></div>
     </div>
     <div class="composer-foot">
       <div class="foot-left">
@@ -323,7 +395,11 @@
       <button class="btn-primary" id="publishBtn" disabled>發布</button>
     </div>
   </section>
+  </section>
+  <!-- ===== /撰寫頁 ===== -->
 
+  <!-- ===== 日記頁 ===== -->
+  <section id="page-journal" class="page">
   <!-- Filter -->
   <div class="filterbar">
     <span class="fb-label">篩選</span>
@@ -333,8 +409,18 @@
     <span class="filter-count" id="filterCount"></span>
   </div>
 
+  <!-- Category filter -->
+  <div class="catbar" id="catbar"></div>
+
   <!-- Feed -->
   <section class="feed" id="feed" aria-live="polite"></section>
+
+  <!-- 撰寫浮動鈕 -->
+  <button class="fab" id="fabWrite" title="寫新的一頁" aria-label="寫新的一頁">
+    <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
+  </section>
+  <!-- ===== /日記頁 ===== -->
 
 </main>
 
@@ -352,7 +438,24 @@ const DB_NAME = 'xinying_journal_db';
 const DB_VER  = 1;
 const LS_THEME = 'xy_theme';
 const LS_DRAFT_TEXT = 'xy_draft_text';   // localStorage 即時暫存草稿文字
+const LS_CATS = 'xy_custom_cats';        // localStorage 使用者自訂分類
 let db;
+
+/* ---------- 分類 ---------- */
+const DEFAULT_CATS = ['心情','日常','旅行','工作','靈感'];
+const CAT_META = {'心情':'#C98BA0','日常':'#8BA88E','旅行':'#7FA0C4','工作':'#C2A06B','靈感':'#8E86C4'};
+const CAT_PALETTE = ['#C98BA0','#8BA88E','#7FA0C4','#C2A06B','#8E86C4','#B58BC9','#7FB3B0','#C98B7F'];
+let editorCategory = '';   // 撰寫中選取的分類
+let catFilter = '';        // Feed 依分類篩選（''=全部）
+function customCats(){ try{ return JSON.parse(localStorage.getItem(LS_CATS)||'[]'); }catch(e){ return []; } }
+function saveCustomCats(arr){ try{ localStorage.setItem(LS_CATS, JSON.stringify(arr)); }catch(e){} }
+function allCats(){ const c=customCats(); return [...DEFAULT_CATS, ...c.filter(x=>!DEFAULT_CATS.includes(x))]; }
+function catColor(name){
+  if(!name) return 'var(--faint)';
+  if(CAT_META[name]) return CAT_META[name];
+  let h=0; for(let i=0;i<name.length;i++) h=(h*31+name.charCodeAt(i))>>>0;
+  return CAT_PALETTE[h % CAT_PALETTE.length];
+}
 
 /* ---------- 小工具 ---------- */
 const $  = (s)=>document.querySelector(s);
@@ -499,6 +602,31 @@ function updatePublishState(){
   publishBtn.textContent = editingId ? '儲存修改' : '發布';
 }
 
+/* ---------- 分類選擇（撰寫器） ---------- */
+function renderCatChoices(){
+  const box = $('#catChoices'); if(!box) return;
+  box.innerHTML='';
+  allCats().forEach(name=>{
+    const b=document.createElement('button'); b.type='button';
+    b.className='cat-pill'+(editorCategory===name?' on':'');
+    b.style.setProperty('--cc', catColor(name));
+    b.innerHTML = `<i></i>${escapeHtml(name)}`;
+    b.onclick=()=>{ editorCategory = (editorCategory===name?'':name); renderCatChoices(); scheduleDraftSave(); };
+    box.appendChild(b);
+  });
+  const add=document.createElement('button'); add.type='button'; add.className='cat-pill add';
+  add.textContent='＋ 新增'; add.title='新增自訂分類';
+  add.onclick=addCategory;
+  box.appendChild(add);
+}
+function addCategory(){
+  const name=(prompt('新增一個分類名稱（例如：讀書、育兒、夢境）')||'').trim();
+  if(!name) return;
+  if(name.length>8){ toast('分類名稱請控制在 8 字以內'); return; }
+  if(!allCats().includes(name)){ const c=customCats(); c.push(name); saveCustomCats(c); }
+  editorCategory=name; renderCatChoices(); scheduleDraftSave();
+}
+
 /* ---------- 草稿自動暫存 ---------- */
 let draftTimer;
 function scheduleDraftSave(){
@@ -510,8 +638,8 @@ function scheduleDraftSave(){
 async function saveDraftNow(){
   if(editingId) return; // 編輯既有貼文時不覆寫草稿
   const content = editor.value;
-  if(!content.trim() && editorMedia.length===0){ await clearDraftDB(); showDraftNote(''); return; }
-  await saveDraftDB({ content, media: editorMedia.map(m=>({id:m.id,name:m.name,type:m.type,kind:m.kind,blob:m.blob})), updatedAt:Date.now() });
+  if(!content.trim() && editorMedia.length===0 && !editorCategory){ await clearDraftDB(); showDraftNote(''); return; }
+  await saveDraftDB({ content, category:editorCategory, media: editorMedia.map(m=>({id:m.id,name:m.name,type:m.type,kind:m.kind,blob:m.blob})), updatedAt:Date.now() });
   showDraftNote(`草稿已暫存 · ${fmtTime(Date.now())}`);
 }
 function showDraftNote(txt){ const n=$('#draftNote'); n.innerHTML = txt ? `<b>●</b> ${txt}` : ''; }
@@ -520,8 +648,9 @@ async function restoreDraft(){
   const d = await getDraftDB();
   if(d && (d.content?.trim() || (d.media&&d.media.length))){
     editor.value = d.content||'';
+    editorCategory = d.category||'';
     editorMedia = (d.media||[]).map(m=>({...m}));
-    renderMediaStrip(); autoGrow(); updatePublishState();
+    renderMediaStrip(); renderCatChoices(); autoGrow(); updatePublishState();
     showDraftNote('已回復上次未發布的草稿');
   }
 }
@@ -533,19 +662,20 @@ async function publish(){
   const media = editorMedia.map(m=>({id:m.id,name:m.name,type:m.type,kind:m.kind,blob:m.blob}));
   if(editingId){
     const existing = await getPost(editingId);
-    const updated = { ...existing, content, media, updatedAt:Date.now() };
+    const updated = { ...existing, content, category:editorCategory, media, updatedAt:Date.now() };
     await putPost(updated);
     toast('已儲存修改');
   }else{
-    await putPost({ id:uid(), content, media, createdAt:Date.now(), updatedAt:Date.now() });
+    await putPost({ id:uid(), content, category:editorCategory, media, createdAt:Date.now(), updatedAt:Date.now() });
     toast('已發布');
   }
   // 清空撰寫器與草稿
-  editor.value=''; editorMedia=[]; editingId=null;
-  renderMediaStrip(); autoGrow(); updatePublishState(); showDraftNote('');
+  editor.value=''; editorMedia=[]; editingId=null; editorCategory='';
+  renderMediaStrip(); renderCatChoices(); autoGrow(); updatePublishState(); showDraftNote('');
   await clearDraftDB(); try{ localStorage.removeItem(LS_DRAFT_TEXT); }catch(e){}
   switchTab('write');
   await renderFeed();
+  showView('journal');
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -554,8 +684,10 @@ async function startEdit(id){
   const p = await getPost(id); if(!p) return;
   editingId = id;
   editor.value = p.content||'';
+  editorCategory = p.category||'';
   editorMedia = (p.media||[]).map(m=>({...m}));
-  renderMediaStrip(); autoGrow(); updatePublishState(); switchTab('write');
+  renderMediaStrip(); renderCatChoices(); autoGrow(); updatePublishState(); switchTab('write');
+  showView('write');
   showDraftNote('正在編輯這則紀錄');
   document.querySelector('.composer').scrollIntoView({behavior:'smooth',block:'start'});
 }
@@ -573,14 +705,18 @@ async function renderFeed(){
   posts.sort((a,b)=> b.createdAt - a.createdAt);
   rebuildMonthOptions(posts);
 
-  let shown = posts;
-  if(filterMode==='day')   shown = posts.filter(p=>dayKey(p.createdAt)===filterValue);
-  if(filterMode==='month') shown = posts.filter(p=>ymKey(p.createdAt)===filterValue);
+  renderCatbar(posts);
 
-  $('#filterCount').textContent = (filterMode==='all')
-    ? (posts.length ? `共 ${posts.length} 則紀錄` : '')
-    : `符合 ${shown.length} 則`;
-  $('#clearFilter').style.display = (filterMode==='all') ? 'none' : '';
+  let shown = posts;
+  if(catFilter)            shown = shown.filter(p=>(p.category||'')===catFilter);
+  if(filterMode==='day')   shown = shown.filter(p=>dayKey(p.createdAt)===filterValue);
+  if(filterMode==='month') shown = shown.filter(p=>ymKey(p.createdAt)===filterValue);
+
+  const anyFilter = filterMode!=='all' || !!catFilter;
+  $('#filterCount').textContent = anyFilter
+    ? `符合 ${shown.length} 則`
+    : (posts.length ? `共 ${posts.length} 則紀錄` : '');
+  $('#clearFilter').style.display = anyFilter ? '' : 'none';
 
   if(shown.length===0){
     feed.innerHTML = `<div class="empty-state">
@@ -597,9 +733,12 @@ async function renderFeed(){
     const rel = relTime(p.createdAt);
     el.innerHTML = `
       <div class="post-head">
-        <div class="post-date">
-          <span>${fmtDate(p.createdAt)}</span>
-          <span class="time">${fmtTime(p.createdAt)}${rel? ' · '+rel:''}</span>
+        <div class="post-head-left">
+          <div class="post-date">
+            <span>${fmtDate(p.createdAt)}</span>
+            <span class="time">${fmtTime(p.createdAt)}${rel? ' · '+rel:''}</span>
+          </div>
+          ${p.category ? `<span class="post-cat" style="--cc:${catColor(p.category)}"><i></i>${escapeHtml(p.category)}</span>` : ''}
         </div>
         <div class="post-actions">
           <button data-act="edit" title="編輯"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
@@ -651,6 +790,25 @@ function rebuildMonthOptions(posts){
   if(months.includes(cur)) sel.value = cur;
 }
 
+function renderCatbar(posts){
+  const bar = $('#catbar'); if(!bar) return;
+  // 統計每個分類的則數
+  const counts = {};
+  posts.forEach(p=>{ if(p.category){ counts[p.category]=(counts[p.category]||0)+1; } });
+  bar.innerHTML='';
+  const chip=(label,val,color,n)=>{
+    const b=document.createElement('button'); b.type='button';
+    b.className='cat-chip'+(catFilter===val?' on':'');
+    if(color) b.style.setProperty('--cc', color);
+    b.innerHTML = (val? '<i></i>':'') + escapeHtml(label) + (n!=null? ` <span style="opacity:.6">${n}</span>`:'');
+    b.onclick=()=>{ catFilter = (catFilter===val?'':val); renderFeed(); };
+    bar.appendChild(b);
+  };
+  chip('全部','', null, posts.length);
+  // 只顯示「有紀錄」或屬於預設的分類，避免空分類佔位
+  allCats().forEach(name=>{ if(counts[name] || DEFAULT_CATS.includes(name)) chip(name, name, catColor(name), counts[name]||0); });
+}
+
 /* ---------- Lightbox ---------- */
 function openLightbox(url){ $('#lightboxImg').src=url; $('#lightbox').classList.add('show'); }
 $('#lightbox').onclick=()=>$('#lightbox').classList.remove('show');
@@ -678,7 +836,7 @@ async function exportData(){
     for(const m of (p.media||[])){
       media.push({ id:m.id, name:m.name, type:m.type, kind:m.kind, data: await blobToDataURL(m.blob) });
     }
-    out.push({ id:p.id, content:p.content, createdAt:p.createdAt, updatedAt:p.updatedAt, media });
+    out.push({ id:p.id, content:p.content, category:p.category||'', createdAt:p.createdAt, updatedAt:p.updatedAt, media });
   }
   const payload = { app:'心映隨筆', schema:1, exportedAt:Date.now(), count:out.length, posts:out };
   const blob = new Blob([JSON.stringify(payload)], {type:'application/json'});
@@ -703,9 +861,12 @@ async function importData(file){
         id:m.id||uid(), name:m.name, type:m.type, kind:m.kind || kindOf(m.type||''),
         blob: m.data ? dataURLtoBlob(m.data) : m.blob
       }));
-      await putPost({ id:p.id||uid(), content:p.content||'', createdAt:p.createdAt||Date.now(), updatedAt:p.updatedAt||p.createdAt||Date.now(), media });
+      await putPost({ id:p.id||uid(), content:p.content||'', category:p.category||'', createdAt:p.createdAt||Date.now(), updatedAt:p.updatedAt||p.createdAt||Date.now(), media });
+      // 匯入時若含自訂分類，一併補回清單
+      if(p.category && !allCats().includes(p.category)){ const c=customCats(); c.push(p.category); saveCustomCats(c); }
       added++;
     }
+    renderCatChoices();
     await renderFeed();
     toast(added? `已匯入 ${added} 則紀錄`:'沒有新的紀錄（可能已存在）');
   }catch(err){
@@ -740,6 +901,29 @@ function switchTab(which){
   }
 }
 
+/* ---------- 頁面路由（撰寫頁 / 日記頁） ---------- */
+function showView(v){
+  const write = v==='write';
+  $('#page-write').classList.toggle('active', write);
+  $('#page-journal').classList.toggle('active', !write);
+  if(location.hash.slice(1)!==v){ location.hash = v; }
+  window.scrollTo({top:0, behavior:'auto'});
+  if(write) setTimeout(()=>{ try{ editor.focus(); }catch(e){} }, 60);
+}
+function routeFromHash(){
+  const v = location.hash.slice(1)==='write' ? 'write' : 'journal';
+  showView(v);
+}
+
+/* 若正在編輯既有紀錄，離開撰寫頁時視為取消，回復原本草稿 */
+async function resetEditIfAny(){
+  if(!editingId) return;
+  editingId=null; editor.value=''; editorMedia=[]; editorCategory='';
+  renderMediaStrip(); renderCatChoices(); autoGrow(); await restoreDraft(); updatePublishState();
+}
+async function goWriteNew(){ await resetEditIfAny(); showView('write'); }
+async function goJournal(){ await resetEditIfAny(); showView('journal'); }
+
 function bindEvents(){
   editor.addEventListener('input', ()=>{ autoGrow(); updatePublishState(); scheduleDraftSave(); });
   $('#fileInput').addEventListener('change', e=>{
@@ -752,6 +936,21 @@ function bindEvents(){
   $('#tabWrite').addEventListener('click', ()=>switchTab('write'));
   $('#tabPreview').addEventListener('click', ()=>switchTab('preview'));
 
+  // 頁面切換：浮動鈕進入撰寫、返回鈕與品牌回日記
+  $('#brandHome').addEventListener('click', goJournal);
+  $('#backToJournal').addEventListener('click', goJournal);
+  $('#fabWrite').addEventListener('click', goWriteNew);
+  window.addEventListener('hashchange', routeFromHash);
+
+  // 浮動鈕隨捲動自動隱藏／顯示（往下捲隱藏、往上捲或停住顯示）
+  let lastY = window.scrollY;
+  window.addEventListener('scroll', ()=>{
+    const y = window.scrollY, fab = $('#fabWrite');
+    if(y > lastY + 6 && y > 120) fab.classList.add('hidden');
+    else if(y < lastY - 6) fab.classList.remove('hidden');
+    lastY = y;
+  }, {passive:true});
+
   $('#dateFilter').addEventListener('change', e=>{
     if(e.target.value){ filterMode='day'; filterValue=e.target.value; $('#monthFilter').value=''; }
     else { filterMode='all'; filterValue=''; }
@@ -763,7 +962,8 @@ function bindEvents(){
     renderFeed();
   });
   $('#clearFilter').addEventListener('click', ()=>{
-    filterMode='all'; filterValue=''; $('#dateFilter').value=''; $('#monthFilter').value=''; renderFeed();
+    filterMode='all'; filterValue=''; catFilter='';
+    $('#dateFilter').value=''; $('#monthFilter').value=''; renderFeed();
   });
 
   $('#exportBtn').addEventListener('click', exportData);
@@ -797,9 +997,11 @@ function bindEvents(){
 
   bindEvents();
   autoGrow();
+  renderCatChoices();
   await restoreDraft();
   updatePublishState();
   await renderFeed();
+  routeFromHash();
 })();
 </script>
 </body>
