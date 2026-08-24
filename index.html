@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>心映隨筆 · 日常紀錄</title>
+<title>YEN隨筆日記 · 日常紀錄</title>
 <meta name="description" content="安靜的個人隨筆與多媒體紀錄，資料只存在你的瀏覽器裡。">
 <!-- PWA / 加到主畫面（提升手機長期保存能力） -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="心映隨筆">
+<meta name="apple-mobile-web-app-title" content="YEN隨筆日記">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#EDECEA" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#15141A" media="(prefers-color-scheme: dark)">
@@ -452,8 +452,8 @@
 <header class="topbar">
   <div class="topbar-inner">
     <div class="brand" id="brandHome" style="cursor:pointer" title="回到日記">
-      <div class="brand-name">心映隨筆<span class="dot">·</span></div>
-      <div class="brand-reflect" aria-hidden="true">心映隨筆·</div>
+      <div class="brand-name">YEN隨筆日記<span class="dot">·</span></div>
+      <div class="brand-reflect" aria-hidden="true">YEN隨筆日記·</div>
       <div class="brand-sub">Daily Journal</div>
     </div>
     <div class="toolbtns">
@@ -595,7 +595,7 @@
 <script>
 "use strict";
 /* =========================================================
-   心映隨筆 — 純前端 · IndexedDB 儲存 · GitHub Pages 可部署
+   YEN隨筆日記 — 純前端 · IndexedDB 儲存 · GitHub Pages 可部署
    ========================================================= */
 
 const DB_NAME = 'xinying_journal_db';
@@ -1318,10 +1318,10 @@ async function exportData(){
     }
     out.push({ id:p.id, content:p.content, category:p.category||'', createdAt:p.createdAt, updatedAt:p.updatedAt, media });
   }
-  const payload = { app:'心映隨筆', schema:1, exportedAt:Date.now(), count:out.length, posts:out };
+  const payload = { app:'YEN隨筆日記', schema:1, exportedAt:Date.now(), count:out.length, posts:out };
   const blob = new Blob([JSON.stringify(payload)], {type:'application/json'});
   const d=new Date(); const pad=n=>String(n).padStart(2,'0');
-  const fname = `心映隨筆_備份_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.json`;
+  const fname = `YEN隨筆日記_備份_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.json`;
 
   const markDone = ()=>{
     try{ localStorage.setItem(LS_LAST_BACKUP, String(Date.now())); localStorage.removeItem(LS_BACKUP_SNOOZE); }catch(e){}
@@ -1333,7 +1333,7 @@ async function exportData(){
   try{ file = new File([blob], fname, {type:'application/json'}); }catch(e){}
   if(file && navigator.canShare && navigator.canShare({files:[file]})){
     try{
-      await navigator.share({ files:[file], title:'心映隨筆備份', text:'心映隨筆 日記備份' });
+      await navigator.share({ files:[file], title:'YEN隨筆日記備份', text:'YEN隨筆日記 日記備份' });
       markDone();
       toast('已開啟分享，可存到 iCloud 或傳給自己');
       return;
@@ -1533,7 +1533,7 @@ function bindEvents(){
   // 動態注入 PWA manifest（讓 Android/Chrome 可安裝成 App）
   try{
     const icon = document.querySelector('link[rel="apple-touch-icon"]').href;
-    const manifest = { name:'心映隨筆', short_name:'心映隨筆', start_url:'./', scope:'./',
+    const manifest = { name:'YEN隨筆日記', short_name:'YEN隨筆日記', start_url:'./', scope:'./',
       display:'standalone', background_color:'#EDECEA', theme_color:'#6E6FA0',
       icons:[{ src:icon, sizes:'512x512', type:'image/png', purpose:'any maskable' }] };
     const link = document.createElement('link'); link.rel='manifest';
