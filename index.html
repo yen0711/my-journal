@@ -17,6 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Noto+Serif+TC:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root{
     --bg:#EDECEA;
@@ -328,9 +329,9 @@
   .post-media.single img{width:100%;max-height:520px;object-fit:contain;background:var(--surface-2);display:block;cursor:zoom-in;}
   .post-media.single video{width:100%;max-height:520px;background:#000;display:block;}
   /* 多個視覺媒體：固定高度的橫向底片條 */
-  .post-media:not(.single) figure{height:230px;}
-  .post-media:not(.single) img{height:100%;width:auto;max-width:min(80vw,440px);object-fit:cover;display:block;cursor:zoom-in;}
-  .post-media:not(.single) video{height:100%;width:auto;max-width:min(80vw,440px);background:#000;display:block;}
+  .post-media:not(.single) figure{width:min(78vw,340px);height:230px;}
+  .post-media:not(.single) img{width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in;}
+  .post-media:not(.single) video{width:100%;height:100%;object-fit:cover;background:#000;display:block;}
 
   /* 音檔與其他附件（數量少，維持縱向排列） */
   .post-files{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
@@ -347,6 +348,42 @@
   .empty-state .glyph{font-family:var(--serif);font-size:2.6rem;color:var(--accent);opacity:.55;margin-bottom:14px;}
   .empty-state p{margin:.3em 0;font-size:.92rem;}
   .empty-state .sub{font-size:.8rem;color:var(--faint);}
+
+  /* ---------- 雲端同步 ---------- */
+  #syncBtn{position:relative;}
+  .sync-dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;
+    background:var(--muted);border:2px solid var(--surface);transition:.2s;opacity:.5;}
+  .sync-dot.on{background:#5AA469;opacity:1;}      /* 已連結 */
+  .sync-dot.syncing{background:var(--accent);opacity:1;animation:pulse 1s infinite;}
+  .sync-dot.err{background:#C46B6B;opacity:1;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+  .modal{position:fixed;inset:0;z-index:90;background:rgba(12,12,18,.55);
+    display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);}
+  .modal[hidden]{display:none;}
+  .modal-card{position:relative;background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--r);box-shadow:0 24px 70px rgba(0,0,0,.3);width:100%;max-width:420px;
+    padding:26px 24px 22px;animation:pagein .25s ease both;}
+  .modal-x{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:50%;
+    border:none;background:transparent;color:var(--muted);cursor:pointer;display:grid;place-items:center;transition:.15s;}
+  .modal-x:hover{background:var(--surface-2);color:var(--ink);}
+  .modal-x svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;}
+  .modal-title{font-family:var(--serif);font-size:1.2rem;margin:0 0 8px;color:var(--ink);}
+  .modal-sub{font-size:.86rem;color:var(--muted);line-height:1.6;margin:0 0 16px;}
+  .sync-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+  .modal-btn{border:none;border-radius:10px;padding:10px 18px;font-size:.88rem;cursor:pointer;font-family:var(--sans);transition:.15s;}
+  .modal-btn.primary{background:var(--accent);color:#fff;}
+  .modal-btn.primary:hover{filter:brightness(1.06);}
+  .modal-btn.primary.small{padding:8px 14px;font-size:.82rem;margin-top:8px;}
+  .modal-btn.ghost{background:var(--surface-2);color:var(--ink);}
+  .modal-btn.ghost:hover{filter:brightness(.97);}
+  .sync-last{font-size:.78rem;color:var(--muted);margin:6px 0 0;}
+  .sync-adv{margin-top:18px;border-top:1px solid var(--line);padding-top:14px;}
+  .sync-adv summary{font-size:.84rem;color:var(--accent-ink);cursor:pointer;}
+  .modal-hint{font-size:.8rem;color:var(--muted);line-height:1.6;margin:10px 0;}
+  .modal-input{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;
+    font-size:.82rem;font-family:var(--sans);background:var(--bg);color:var(--ink);}
+  .modal-input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent;}
 
   /* ---------- Lightbox ---------- */
   .lightbox{
@@ -420,6 +457,10 @@
       <div class="brand-sub">Daily Journal</div>
     </div>
     <div class="toolbtns">
+      <button class="iconbtn" id="syncBtn" title="雲端同步" aria-label="雲端同步">
+        <svg viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1 0-8 5 5 0 0 1 9.6-1.5A3.5 3.5 0 0 1 18 17H7z"/><path d="M12 11v6"/><path d="M9.5 13.5L12 11l2.5 2.5"/></svg>
+        <span class="sync-dot" id="syncDot"></span>
+      </button>
       <button class="iconbtn" id="importBtn" title="匯入備份" aria-label="匯入備份">
         <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M8 11l4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
       </button>
@@ -507,6 +548,32 @@
 </main>
 
 <input type="file" id="importInput" accept="application/json,.json" hidden>
+
+<!-- 雲端同步設定視窗 -->
+<div class="modal" id="syncModal" hidden>
+  <div class="modal-card">
+    <button class="modal-x" id="syncModalClose" aria-label="關閉"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <h2 class="modal-title">雲端同步</h2>
+    <p class="modal-sub" id="syncStatusText">連結後，日記會自動同步到你自己的 Google 雲端硬碟，手機和電腦就能互通。</p>
+
+    <div class="sync-row" id="syncConnectRow">
+      <button class="modal-btn primary" id="syncConnectBtn">連結 Google 雲端硬碟</button>
+    </div>
+    <div class="sync-row" id="syncConnectedRow" hidden>
+      <button class="modal-btn primary" id="syncNowBtn">立即同步</button>
+      <button class="modal-btn ghost" id="syncDisconnectBtn">中斷連結</button>
+    </div>
+    <p class="sync-last" id="syncLastText"></p>
+
+    <details class="sync-adv" id="syncAdv">
+      <summary>進階設定：填入你的 Google 金鑰</summary>
+      <p class="modal-hint">第一次使用需要一把免費金鑰（OAuth Client ID）。跟著我給你的圖文步驟申請，取得後貼在這裡即可，只需做一次。</p>
+      <input type="text" id="gClientInput" class="modal-input" placeholder="貼上 Client ID（結尾是 .apps.googleusercontent.com）">
+      <button class="modal-btn primary small" id="gClientSave">儲存金鑰</button>
+    </details>
+  </div>
+</div>
+
 <div class="lightbox" id="lightbox">
   <button class="lb-back" id="lbBack" aria-label="返回">
     <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
@@ -819,6 +886,7 @@ async function publish(){
   await renderFeed();
   showView('journal');
   window.scrollTo({top:0,behavior:'smooth'});
+  scheduleSync();
 }
 
 /* ---------- 編輯既有貼文 ---------- */
@@ -935,7 +1003,7 @@ async function renderFeed(){
     el.querySelector('[data-act="edit"]').onclick = ()=>startEdit(p.id);
     el.querySelector('[data-act="del"]').onclick = async ()=>{
       if(confirm('確定要刪除這則紀錄嗎？此動作無法復原。')){
-        await deletePost(p.id); toast('已刪除'); await renderFeed();
+        addTombstone(p.id); await deletePost(p.id); toast('已刪除'); await renderFeed(); scheduleSync();
       }
     };
     feed.appendChild(el);
@@ -970,8 +1038,218 @@ function renderCatbar(posts){
   allCats().forEach(name=>{ if(counts[name] || DEFAULT_CATS.includes(name)) chip(name, name, catColor(name), counts[name]||0); });
 }
 
+/* ============================================================
+   Google 雲端硬碟同步（存放於 App 專屬隱藏資料夾 appDataFolder）
+   本機 IndexedDB 為主，雲端為同步副本；合併採「同 id 取較新」+ 刪除墓碑
+   ============================================================ */
+const G_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
+const LS_GCLIENT = 'xy_g_client_id';
+const LS_GCONNECTED = 'xy_g_connected';
+const LS_SYNC_LAST = 'xy_sync_last';
+const LS_MANIFEST_ID = 'xy_manifest_fileid';
+const LS_TOMB = 'xy_tombstones';
+let gTokenClient=null, gToken=null, gTokenExp=0, syncing=false, syncTimer=null;
+
+function getTombstones(){ try{ return JSON.parse(localStorage.getItem(LS_TOMB)||'[]'); }catch(e){ return []; } }
+function saveTombstones(a){ try{ localStorage.setItem(LS_TOMB, JSON.stringify(a)); }catch(e){} }
+function addTombstone(id){ const a=getTombstones().filter(t=>t.id!==id); a.push({id, at:Date.now()}); saveTombstones(a); }
+function isConnected(){ return !!localStorage.getItem(LS_GCLIENT) && localStorage.getItem(LS_GCONNECTED)==='1'; }
+
+function gInitTokenClient(){
+  const cid = localStorage.getItem(LS_GCLIENT);
+  if(!cid) return false;
+  if(!(window.google && google.accounts && google.accounts.oauth2)) return false;
+  gTokenClient = google.accounts.oauth2.initTokenClient({ client_id:cid, scope:G_SCOPE, callback:()=>{} });
+  return true;
+}
+function gGetToken(interactive){
+  return new Promise((resolve,reject)=>{
+    if(gToken && Date.now() < gTokenExp-60000){ resolve(gToken); return; }
+    if(!gTokenClient && !gInitTokenClient()){ reject(new Error('尚未設定金鑰或 Google 元件未載入')); return; }
+    gTokenClient.callback = (resp)=>{
+      if(resp && resp.error){ reject(new Error(resp.error)); return; }
+      gToken = resp.access_token; gTokenExp = Date.now() + (resp.expires_in||3600)*1000;
+      resolve(gToken);
+    };
+    try{ gTokenClient.requestAccessToken({ prompt: interactive ? 'consent' : '' }); }
+    catch(e){ reject(e); }
+  });
+}
+
+/* --- Drive REST --- */
+async function driveFindManifest(token){
+  const q = encodeURIComponent("name='manifest.json'");
+  const r = await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${q}&fields=files(id)`,
+    { headers:{ Authorization:'Bearer '+token } });
+  if(!r.ok) throw new Error('讀取清單失敗 '+r.status);
+  const j = await r.json();
+  if(j.files && j.files.length){ localStorage.setItem(LS_MANIFEST_ID, j.files[0].id); return j.files[0].id; }
+  localStorage.removeItem(LS_MANIFEST_ID); return null;
+}
+async function driveGetJson(token, id){
+  const r = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`, { headers:{ Authorization:'Bearer '+token } });
+  if(!r.ok) throw new Error('下載清單失敗 '+r.status);
+  return await r.json();
+}
+async function driveGetBlob(token, id){
+  const r = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`, { headers:{ Authorization:'Bearer '+token } });
+  if(!r.ok) throw new Error('下載附件失敗 '+r.status);
+  return await r.blob();
+}
+async function driveUploadBlob(token, blob, label){
+  const boundary = '----xy'+Math.random().toString(36).slice(2);
+  const meta = { name:'media_'+label, parents:['appDataFolder'] };
+  const body = new Blob([
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n`, JSON.stringify(meta),
+    `\r\n--${boundary}\r\nContent-Type: ${blob.type||'application/octet-stream'}\r\n\r\n`, blob,
+    `\r\n--${boundary}--`
+  ]);
+  const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+    { method:'POST', headers:{ Authorization:'Bearer '+token, 'Content-Type':'multipart/related; boundary='+boundary }, body });
+  if(!r.ok) throw new Error('上傳附件失敗 '+r.status);
+  return (await r.json()).id;
+}
+async function drivePutManifest(token, manifest){
+  const content = JSON.stringify(manifest);
+  let id = localStorage.getItem(LS_MANIFEST_ID);
+  if(id){
+    const r = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${id}?uploadType=media`,
+      { method:'PATCH', headers:{ Authorization:'Bearer '+token, 'Content-Type':'application/json' }, body:content });
+    if(r.ok) return id;
+  }
+  const boundary = '----xy'+Math.random().toString(36).slice(2);
+  const meta = { name:'manifest.json', parents:['appDataFolder'] };
+  const body = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${content}\r\n--${boundary}--`;
+  const r2 = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+    { method:'POST', headers:{ Authorization:'Bearer '+token, 'Content-Type':'multipart/related; boundary='+boundary }, body });
+  if(!r2.ok) throw new Error('寫入清單失敗 '+r2.status);
+  const nid = (await r2.json()).id; localStorage.setItem(LS_MANIFEST_ID, nid); return nid;
+}
+
+/* --- 拉取：雲端 → 本機 --- */
+async function syncPull(token){
+  const mid = await driveFindManifest(token);
+  if(!mid) return;
+  const remote = await driveGetJson(token, mid);
+  const local = await getAllPosts();
+  const localById = new Map(local.map(p=>[p.id,p]));
+  const tomb = new Map(getTombstones().map(t=>[t.id, t.at]));
+  (remote.tombstones||[]).forEach(t=> tomb.set(t.id, Math.max(tomb.get(t.id)||0, t.at)) );
+
+  for(const rp of (remote.posts||[])){
+    const lp = localById.get(rp.id);
+    if(lp && (lp.updatedAt||0) >= (rp.updatedAt||0)) continue;   // 本機較新，跳過
+    const media = [];
+    for(const rm of (rp.media||[])){
+      const keep = lp && (lp.media||[]).find(x=> x.id===rm.id && x.blob);
+      let blob = keep ? keep.blob : (rm.driveId ? await driveGetBlob(token, rm.driveId) : null);
+      media.push({ id:rm.id, name:rm.name, type:rm.type, kind:rm.kind, driveId:rm.driveId, blob });
+    }
+    await putPost({ id:rp.id, content:rp.content, category:rp.category||'', createdAt:rp.createdAt, updatedAt:rp.updatedAt, media });
+  }
+  // 套用刪除墓碑：本機該則沒有比墓碑更新，就刪掉
+  for(const [id,at] of tomb){
+    const lp = await getPost(id);
+    if(lp && at >= (lp.updatedAt||0)) await deletePost(id);
+  }
+  saveTombstones([...tomb].map(([id,at])=>({id,at})));
+}
+
+/* --- 推送：本機 → 雲端 --- */
+async function syncPush(token){
+  const posts = await getAllPosts();
+  for(const p of posts){
+    let changed=false;
+    for(const m of (p.media||[])){
+      if(!m.driveId && m.blob){ m.driveId = await driveUploadBlob(token, m.blob, m.id); changed=true; }
+    }
+    if(changed) await putPost(p);
+  }
+  const manifest = {
+    schema:2, updatedAt:Date.now(),
+    posts: posts.map(p=>({ id:p.id, content:p.content||'', category:p.category||'',
+      createdAt:p.createdAt, updatedAt:p.updatedAt||p.createdAt,
+      media:(p.media||[]).map(m=>({ id:m.id, name:m.name, type:m.type, kind:m.kind, driveId:m.driveId })) })),
+    tombstones: getTombstones()
+  };
+  await drivePutManifest(token, manifest);
+}
+
+/* --- 完整同步 --- */
+async function fullSync(interactive){
+  if(syncing) return;
+  if(!localStorage.getItem(LS_GCLIENT)){ if(interactive) openSyncModal(); return; }
+  syncing = true; setSyncDot('syncing');
+  try{
+    const token = await gGetToken(interactive);
+    localStorage.setItem(LS_GCONNECTED,'1');
+    await syncPull(token);
+    await syncPush(token);
+    localStorage.setItem(LS_SYNC_LAST, String(Date.now()));
+    await renderFeed();
+    setSyncDot('on'); updateSyncModal();
+    if(interactive) toast('已與 Google 雲端硬碟同步');
+  }catch(err){
+    console.error('同步失敗', err); setSyncDot('err');
+    if(interactive) toast('同步失敗：'+(err.message||'請稍後再試'));
+  }finally{ syncing=false; }
+}
+function scheduleSync(){ if(!isConnected()) return; clearTimeout(syncTimer); syncTimer=setTimeout(()=>fullSync(false), 3500); }
+
+/* --- UI --- */
+function setSyncDot(state){
+  const d = $('#syncDot'); if(!d) return;
+  d.className = 'sync-dot' + (state?(' '+state):'');
+}
+function fmtSyncTime(ms){
+  if(!ms) return '';
+  const diff = Date.now()-ms;
+  if(diff < 60000) return '剛剛';
+  if(diff < 3600000) return Math.floor(diff/60000)+' 分鐘前';
+  const d=new Date(ms), pad=n=>String(n).padStart(2,'0');
+  return `${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function updateSyncModal(){
+  const connected = isConnected();
+  $('#syncConnectRow').hidden = connected;
+  $('#syncConnectedRow').hidden = !connected;
+  $('#syncStatusText').textContent = connected
+    ? '已連結。日記會自動同步到你自己的 Google 雲端硬碟，手機和電腦互通。'
+    : '連結後，日記會自動同步到你自己的 Google 雲端硬碟，手機和電腦就能互通。';
+  const last = parseInt(localStorage.getItem(LS_SYNC_LAST)||'0');
+  $('#syncLastText').textContent = last ? ('上次同步：'+fmtSyncTime(last)) : '';
+  const cid = localStorage.getItem(LS_GCLIENT)||'';
+  const input = $('#gClientInput'); if(input && !input.value) input.value = cid;
+  if(!cid){ $('#syncAdv').open = true; }
+}
+function openSyncModal(){ updateSyncModal(); $('#syncModal').hidden=false; }
+function closeSyncModal(){ $('#syncModal').hidden=true; }
+
+function bindSync(){
+  $('#syncBtn').addEventListener('click', openSyncModal);
+  $('#syncModalClose').addEventListener('click', closeSyncModal);
+  $('#syncModal').addEventListener('click', e=>{ if(e.target.id==='syncModal') closeSyncModal(); });
+  $('#syncConnectBtn').addEventListener('click', ()=>{
+    if(!localStorage.getItem(LS_GCLIENT)){ $('#syncAdv').open=true; toast('請先填入金鑰（見進階設定）'); return; }
+    fullSync(true);
+  });
+  $('#syncNowBtn').addEventListener('click', ()=>fullSync(true));
+  $('#syncDisconnectBtn').addEventListener('click', ()=>{
+    localStorage.removeItem(LS_GCONNECTED); localStorage.removeItem(LS_SYNC_LAST);
+    gToken=null; gTokenExp=0; setSyncDot(''); updateSyncModal(); toast('已中斷連結（本機日記仍保留）');
+  });
+  $('#gClientSave').addEventListener('click', ()=>{
+    const v = $('#gClientInput').value.trim();
+    if(!v){ toast('請貼上 Client ID'); return; }
+    localStorage.setItem(LS_GCLIENT, v); gTokenClient=null; gInitTokenClient();
+    updateSyncModal(); toast('金鑰已儲存，可以按「連結」了');
+  });
+  // 啟動時若已連結，靜默同步一次
+  if(isConnected()){ setSyncDot('on'); setTimeout(()=>fullSync(false), 1200); }
+  else setSyncDot('');
+}
+
 /* ---------- Lightbox ---------- */
-/* ---------- Lightbox（相簿式瀏覽） ---------- */
 let lbImages = [], lbIndex = 0;
 function openLightbox(images, index){
   lbImages = Array.isArray(images) ? images : [images];
@@ -1283,6 +1561,7 @@ function bindEvents(){
   updatePublishState();
   await renderFeed();
   routeFromHash();
+  bindSync();
 })();
 </script>
 </body>
