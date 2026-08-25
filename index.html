@@ -106,18 +106,21 @@
     outline:2px solid var(--accent);outline-offset:2px;
   }
 
-  /* ---------- 備份提醒 ---------- */
+  /* ---------- 備份提醒（左下角小跳窗） ---------- */
   .backup-note{
-    display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:22px;
-    background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 28%,var(--line));
-    border-radius:var(--r);padding:12px 15px;font-size:.85rem;color:var(--ink);line-height:1.5;
+    position:fixed;left:16px;bottom:calc(20px + env(safe-area-inset-bottom, 0px));z-index:46;
+    display:flex;align-items:center;gap:9px;max-width:min(78vw,320px);
+    background:var(--surface);border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line));
+    border-radius:14px;padding:10px 12px;font-size:.8rem;color:var(--ink);line-height:1.45;
+    box-shadow:0 10px 30px rgba(0,0,0,.18);animation:pagein .3s ease both;
   }
-  .backup-note .bn-ico{width:20px;height:20px;stroke:var(--accent-ink);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
-  .backup-note #backupNoteText{flex:1;min-width:140px;}
-  .backup-note .bn-actions{display:flex;gap:6px;align-items:center;margin-left:auto;}
-  .bn-primary{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:7px 15px;font-size:.82rem;cursor:pointer;transition:.15s;font-family:var(--sans);}
+  .backup-note[hidden]{display:none;}
+  .backup-note .bn-ico{width:18px;height:18px;stroke:var(--accent-ink);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+  .backup-note #backupNoteText{flex:1;min-width:0;}
+  .backup-note .bn-actions{display:flex;gap:4px;align-items:center;flex-shrink:0;}
+  .bn-primary{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:6px 12px;font-size:.8rem;cursor:pointer;transition:.15s;font-family:var(--sans);}
   .bn-primary:hover{filter:brightness(1.06);}
-  .bn-ghost{background:none;border:none;color:var(--muted);font-size:.82rem;cursor:pointer;padding:7px 8px;border-radius:9px;font-family:var(--sans);}
+  .bn-ghost{background:none;border:none;color:var(--muted);font-size:.9rem;cursor:pointer;padding:5px 7px;border-radius:9px;font-family:var(--sans);line-height:1;}
   .bn-ghost:hover{color:var(--ink);}
 
   /* ---------- 頁面容器 ---------- */
@@ -519,15 +522,6 @@
 
   <!-- ===== 日記頁 ===== -->
   <section id="page-journal" class="page">
-  <!-- 備份提醒 -->
-  <div class="backup-note" id="backupNote" hidden>
-    <svg class="bn-ico" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>
-    <span id="backupNoteText"></span>
-    <div class="bn-actions">
-      <button id="backupNow" class="bn-primary">立即備份</button>
-      <button id="backupSnooze" class="bn-ghost">知道了</button>
-    </div>
-  </div>
   <!-- Filter -->
   <div class="filterbar">
     <span class="fb-label">篩選</span>
@@ -542,15 +536,24 @@
 
   <!-- Feed -->
   <section class="feed" id="feed" aria-live="polite"></section>
-
-  <!-- 撰寫浮動鈕 -->
-  <button class="fab" id="fabWrite" title="寫新的一頁" aria-label="寫新的一頁">
-    <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-  </button>
   </section>
   <!-- ===== /日記頁 ===== -->
 
 </main>
+
+<!-- 常駐於畫面外層：浮動鈕與備份提醒（避開頁面動畫容器，定位才正確） -->
+<button class="fab" id="fabWrite" title="寫新的一頁" aria-label="寫新的一頁">
+  <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+<div class="backup-note" id="backupNote" hidden>
+  <svg class="bn-ico" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>
+  <span id="backupNoteText"></span>
+  <div class="bn-actions">
+    <button id="backupNow" class="bn-primary">備份</button>
+    <button id="backupSnooze" class="bn-ghost" aria-label="關閉">✕</button>
+  </div>
+</div>
+
 
 <input type="file" id="importInput" accept="application/json,.json" hidden>
 
@@ -1383,8 +1386,8 @@ function updateBackupNote(count){
   const days = last ? Math.floor((Date.now()-last)/86400000) : -1;
   if(last && days < 14){ note.hidden = true; return; }
   $('#backupNoteText').textContent = last
-    ? `距離上次備份已 ${days} 天了，按一下就能存到 iCloud 或傳給自己。`
-    : `你的日記目前只存在這支手機裡。按「立即備份」可存到 iCloud 雲端硬碟，換手機也不怕遺失。`;
+    ? `已 ${days} 天沒備份了`
+    : `建議先備份一份日記`;
   note.hidden = false;
 }
 async function importData(file){
@@ -1446,6 +1449,9 @@ function showView(v){
   const write = v==='write';
   $('#page-write').classList.toggle('active', write);
   $('#page-journal').classList.toggle('active', !write);
+  // 浮動鈕與備份提醒只在日記頁出現
+  const fab=$('#fabWrite'); if(fab) fab.style.display = write ? 'none' : '';
+  if(write){ const bn=$('#backupNote'); if(bn) bn.hidden = true; }
   if(location.hash.slice(1)!==v){ location.hash = v; }
   window.scrollTo({top:0, behavior:'auto'});
   if(write) setTimeout(()=>{ try{ editor.focus(); }catch(e){} }, 60);
