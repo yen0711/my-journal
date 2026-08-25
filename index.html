@@ -167,7 +167,7 @@
   textarea#editor{
     width:100%;border:none;background:transparent;resize:none;outline:none;
     font-family:var(--serif);font-size:1.06rem;line-height:1.8;color:var(--ink);
-    min-height:104px;padding:12px 0 4px;
+    min-height:104px;padding:12px 0 4px;overflow-y:auto;
   }
   textarea#editor::placeholder{color:var(--faint);}
   #preview{
@@ -293,6 +293,7 @@
   .post-date .time{color:var(--faint);font-variant-numeric:tabular-nums;}
   .post-actions{display:flex;gap:4px;opacity:0;transition:.2s;}
   .post:hover .post-actions{opacity:1;}
+  @media (hover:none){ .post-actions{opacity:1;} }   /* 觸控裝置沒有 hover，永遠顯示 */
   .post-actions button{
     background:none;border:none;color:var(--faint);cursor:pointer;padding:5px;border-radius:7px;
     display:grid;place-items:center;transition:.15s;
@@ -493,10 +494,6 @@
   </div>
   <!-- Composer -->
   <section class="composer" aria-label="撰寫隨筆">
-    <div class="tabs">
-      <button class="tab active" data-tab="write" id="tabWrite">編輯</button>
-      <button class="tab" data-tab="preview" id="tabPreview">預覽</button>
-    </div>
     <div class="composer-body">
       <textarea id="editor" placeholder="此刻，想留下些什麼？&#10;&#10;支援 Markdown：**粗體**、*斜體*、# 標題、- 清單、&gt; 引言…"></textarea>
       <div id="preview" class="empty"></div>
@@ -798,7 +795,12 @@ function clearEditorUrls(){ editorUrls.forEach(u=>URL.revokeObjectURL(u)); edito
 const editor = $('#editor');
 const publishBtn = $('#publishBtn');
 
-function autoGrow(){ editor.style.height='auto'; editor.style.height = Math.max(104, editor.scrollHeight)+'px'; }
+function autoGrow(){
+  editor.style.height='auto';
+  const vh = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+  const cap = Math.max(150, Math.round(vh * 0.42));   // 最高約可視高度的 42%，避免把發布鈕推出畫面
+  editor.style.height = Math.min(cap, Math.max(104, editor.scrollHeight)) + 'px';
+}
 
 function renderMediaStrip(){
   const strip = $('#mediaStrip'); strip.innerHTML='';
@@ -1433,14 +1435,17 @@ function applyTheme(t){
    ========================================================= */
 function switchTab(which){
   const write = which==='write';
-  $('#tabWrite').classList.toggle('active', write);
-  $('#tabPreview').classList.toggle('active', !write);
+  const tw=$('#tabWrite'), tp=$('#tabPreview'), pv=$('#preview');
+  if(tw) tw.classList.toggle('active', write);
+  if(tp) tp.classList.toggle('active', !write);
   editor.style.display = write ? '' : 'none';
-  const pv = $('#preview'); pv.style.display = write ? 'none' : '';
-  if(!write){
-    const val = editor.value.trim();
-    pv.classList.toggle('empty', !val);
-    pv.innerHTML = val ? mdToHtml(editor.value) : '這裡會顯示 Markdown 預覽…';
+  if(pv){
+    pv.style.display = write ? 'none' : '';
+    if(!write){
+      const val = editor.value.trim();
+      pv.classList.toggle('empty', !val);
+      pv.innerHTML = val ? mdToHtml(editor.value) : '這裡會顯示 Markdown 預覽…';
+    }
   }
 }
 
@@ -1472,6 +1477,7 @@ async function goJournal(){ await resetEditIfAny(); showView('journal'); }
 
 function bindEvents(){
   editor.addEventListener('input', ()=>{ autoGrow(); updatePublishState(); scheduleDraftSave(); });
+  if(window.visualViewport){ window.visualViewport.addEventListener('resize', ()=>{ try{ autoGrow(); }catch(e){} }); }
   $('#fileInput').addEventListener('change', async e=>{
     const files = [...e.target.files]; e.target.value='';
     if(!files.length) return;
@@ -1491,8 +1497,6 @@ function bindEvents(){
     else showDraftNote('');
   });
   publishBtn.addEventListener('click', publish);
-  $('#tabWrite').addEventListener('click', ()=>switchTab('write'));
-  $('#tabPreview').addEventListener('click', ()=>switchTab('preview'));
 
   // 頁面切換：浮動鈕進入撰寫、返回鈕與品牌回日記
   $('#brandHome').addEventListener('click', goJournal);
