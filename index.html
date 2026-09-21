@@ -183,6 +183,18 @@
   .sync-dot.on{background:#5AA469;opacity:1;}
   .sync-dot.syncing{background:var(--accent);opacity:1;animation:pulse 1s infinite;}
   .sync-dot.err{background:#C46B6B;opacity:1;}
+  .sync-dot.pending{background:#C2A06B;opacity:1;}
+
+  .sync-resume{
+    display:flex;align-items:center;gap:10px;margin:14px 2px 0;
+    background:var(--surface);border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line));
+    border-radius:14px;padding:10px 14px;font-size:.82rem;color:var(--ink);line-height:1.4;
+    animation:pagein .3s ease both;
+  }
+  .sync-resume[hidden]{display:none;}
+  .sync-resume .sr-ico{width:18px;height:18px;stroke:var(--accent-ink);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+  .sync-resume span{flex:1;min-width:0;}
+  .sync-resume .sr-actions{display:flex;gap:4px;align-items:center;flex-shrink:0;}
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
   .modal{position:fixed;inset:0;z-index:90;background:rgba(12,12,18,.55);display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);}
   .modal[hidden]{display:none;}
@@ -269,6 +281,15 @@
 </header>
 
 <main class="wrap">
+
+  <div class="sync-resume" id="syncResumeBar" hidden>
+    <svg class="sr-ico" viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1 0-8 5 5 0 0 1 9.6-1.5A3.5 3.5 0 0 1 18 17H7z"/><path d="M12 11v6"/><path d="M9.5 13.5L12 11l2.5 2.5"/></svg>
+    <span>點一下，這次瀏覽就會自動同步</span>
+    <div class="sr-actions">
+      <button id="syncResumeGo" class="bn-primary">開始</button>
+      <button id="syncResumeHide" class="bn-ghost" aria-label="關閉">✕</button>
+    </div>
+  </div>
 
   <section id="page-write" class="page">
   <div class="write-top">
@@ -848,6 +869,9 @@ function gInitTokenClient(){
 function gGetToken(interactive){
   return new Promise((resolve,reject)=>{
     if(gToken && Date.now() < gTokenExp-60000){ resolve(gToken); return; }
+    // 沒有有效的快取權杖時，非使用者主動點擊的情境一律不嘗試開啟登入視窗，
+    // 避免 Safari 每次進站都跳出「允許彈出視窗」的提示。
+    if(!interactive){ reject(new Error('needs_interactive')); return; }
     if(!gTokenClient && !gInitTokenClient()){ reject(new Error('尚未設定金鑰或 Google 元件未載入')); return; }
     let settled = false;
     const popupTimer = setTimeout(()=>{
@@ -1016,12 +1040,20 @@ async function fullSync(interactive){
     localStorage.setItem(LS_SYNC_LAST, String(Date.now()));
     await renderFeed();
     setSyncDot('on'); updateSyncModal();
+    hideSyncResumeBar();
+    try{ sessionStorage.setItem(SS_SYNC_RESUME_DISMISSED,'1'); }catch(e){}
     if(interactive) toast('已與 Google 雲端硬碟同步');
     recoverMissingMedia();
   }catch(err){
-    console.error('同步失敗', err); setSyncDot('err'); setSyncProgress('');
-    const msg = friendlyErr(err);
-    if(interactive){ $('#syncStatusText').textContent = '同步失敗：'+msg; toast('同步失敗，請看視窗內的說明'); }
+    setSyncProgress('');
+    if(err && err.message==='needs_interactive'){
+      // 靜默同步：沒有有效權杖、且不是使用者主動點擊，安靜放棄，不跳錯誤也不開視窗
+      setSyncDot('pending');
+    }else{
+      console.error('同步失敗', err); setSyncDot('err');
+      const msg = friendlyErr(err);
+      if(interactive){ $('#syncStatusText').textContent = '同步失敗：'+msg; toast('同步失敗，請看視窗內的說明'); }
+    }
   }finally{ syncing=false; }
 }
 function scheduleSync(){ if(!isConnected()) return; clearTimeout(syncTimer); syncTimer=setTimeout(()=>fullSync(false), 3500); }
@@ -1073,9 +1105,26 @@ function bindSync(){
     localStorage.setItem(LS_GCLIENT, v); gTokenClient=null; gInitTokenClient();
     updateSyncModal(); toast('金鑰已儲存，可以按「連結」了');
   });
-  if(isConnected()){ setSyncDot('on'); setTimeout(()=>fullSync(false), 1200); }
+  $('#syncResumeGo').addEventListener('click', async ()=>{
+    hideSyncResumeBar();
+    await fullSync(true);
+  });
+  $('#syncResumeHide').addEventListener('click', ()=>{
+    try{ sessionStorage.setItem(SS_SYNC_RESUME_DISMISSED,'1'); }catch(e){}
+    hideSyncResumeBar();
+  });
+  // 進站時不再自動嘗試連線 Google（會被 Safari 當成非使用者操作而跳出允許視窗）。
+  // 已連結過的話，顯示一條「點一下」的提示：點過一次後，這次瀏覽全程都會自動同步。
+  if(isConnected()){ setSyncDot('on'); maybeShowSyncResumeBar(); }
   else setSyncDot('');
 }
+const SS_SYNC_RESUME_DISMISSED = 'xy_sync_resume_dismissed';
+function maybeShowSyncResumeBar(){
+  if(gToken && Date.now() < gTokenExp-60000) return;   // 本次瀏覽已經有有效權杖，不用再提示
+  try{ if(sessionStorage.getItem(SS_SYNC_RESUME_DISMISSED)==='1') return; }catch(e){}
+  const bar = $('#syncResumeBar'); if(bar) bar.hidden = false;
+}
+function hideSyncResumeBar(){ const bar = $('#syncResumeBar'); if(bar) bar.hidden = true; }
 
 let lbItems = [], lbIndex = 0;
 function openLightbox(items, index){
@@ -1140,47 +1189,73 @@ function dataURLtoBlob(dataURL){
   for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
   return new Blob([arr],{type:mime});
 }
+let exporting = false;
 async function exportData(){
-  const posts = await getAllPosts();
-  if(posts.length===0){ toast('目前沒有可匯出的資料'); return; }
-  toast('正在打包備份…');
-  const out=[];
-  for(const p of posts){
-    const media=[];
-    for(const m of (p.media||[])){
-      media.push({ id:m.id, name:m.name, type:m.type, kind:m.kind, data: await blobToDataURL(m.blob) });
+  if(exporting) return;
+  exporting = true;
+  const btns = [$('#exportBtn'), $('#backupNow')].filter(Boolean);
+  btns.forEach(b=>b.disabled = true);
+  try{
+    const posts = await getAllPosts();
+    if(posts.length===0){ toast('目前沒有可匯出的資料'); return; }
+    toast('正在打包備份…');
+    const out=[];
+    let missing = 0;   // 尚未同步完成、備份中先跳過的媒體數量
+    for(const p of posts){
+      const media=[];
+      for(const m of (p.media||[])){
+        // 跨裝置同步中可能有些圖片/影片本機還沒有實際內容（只有雲端的參照），
+        // 這種情況直接跳過該檔案，不讓整個備份卡住或讓分頁當機
+        if(!(m.blob instanceof Blob)){
+          missing++;
+          media.push({ id:m.id, name:m.name, type:m.type, kind:m.kind, data:null });
+          continue;
+        }
+        let data;
+        try{ data = await blobToDataURL(m.blob); }
+        catch(e){ missing++; data = null; }
+        media.push({ id:m.id, name:m.name, type:m.type, kind:m.kind, data });
+      }
+      out.push({ id:p.id, content:p.content, category:p.category||'', createdAt:p.createdAt, updatedAt:p.updatedAt, media });
     }
-    out.push({ id:p.id, content:p.content, category:p.category||'', createdAt:p.createdAt, updatedAt:p.updatedAt, media });
-  }
-  const payload = { app:'YEN隨筆日記', schema:1, exportedAt:Date.now(), count:out.length, posts:out };
-  const blob = new Blob([JSON.stringify(payload)], {type:'application/json'});
-  const d=new Date(); const pad=n=>String(n).padStart(2,'0');
-  const fname = `YEN隨筆日記_備份_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.json`;
+    const payload = { app:'YEN隨筆日記', schema:1, exportedAt:Date.now(), count:out.length, posts:out };
+    const blob = new Blob([JSON.stringify(payload)], {type:'application/json'});
+    const d=new Date(); const pad=n=>String(n).padStart(2,'0');
+    const fname = `YEN隨筆日記_備份_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.json`;
 
-  const markDone = ()=>{
-    try{ localStorage.setItem(LS_LAST_BACKUP, String(Date.now())); localStorage.removeItem(LS_BACKUP_SNOOZE); }catch(e){}
-    $('#backupNote').hidden = true;
-  };
+    const markDone = ()=>{
+      try{ localStorage.setItem(LS_LAST_BACKUP, String(Date.now())); localStorage.removeItem(LS_BACKUP_SNOOZE); }catch(e){}
+      $('#backupNote').hidden = true;
+    };
+    const doneMsg = (base)=> missing ? `${base}（有 ${missing} 個尚未同步完成的媒體檔案暫未包含，之後同步完成再備份一次即可）` : base;
 
-  let file = null;
-  try{ file = new File([blob], fname, {type:'application/json'}); }catch(e){}
-  if(file && navigator.canShare && navigator.canShare({files:[file]})){
-    try{
-      await navigator.share({ files:[file], title:'YEN隨筆日記備份', text:'YEN隨筆日記 日記備份' });
-      markDone();
-      toast('已開啟分享，可存到 iCloud 或傳給自己');
-      return;
-    }catch(err){
-      if(err && err.name==='AbortError'){ toast('已取消備份'); return; }
+    let file = null;
+    try{ file = new File([blob], fname, {type:'application/json'}); }catch(e){}
+    if(file && navigator.canShare && navigator.canShare({files:[file]})){
+      try{
+        await navigator.share({ files:[file], title:'YEN隨筆日記備份', text:'YEN隨筆日記 日記備份' });
+        markDone();
+        toast(doneMsg('已開啟分享，可存到 iCloud 或傳給自己'));
+        return;
+      }catch(err){
+        if(err && err.name==='AbortError'){ toast('已取消備份'); return; }
+        // 分享失敗（非取消）就改用下面的直接下載方式
+      }
     }
-  }
 
-  const a=document.createElement('a');
-  a.download = fname;
-  a.href = URL.createObjectURL(blob); a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
-  markDone();
-  toast(`已匯出 ${out.length} 則紀錄`);
+    const a=document.createElement('a');
+    a.download = fname;
+    a.href = URL.createObjectURL(blob); a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+    markDone();
+    toast(doneMsg(`已匯出 ${out.length} 則紀錄`));
+  }catch(err){
+    console.error('匯出失敗', err);
+    toast('備份失敗，請稍後再試一次');
+  }finally{
+    exporting = false;
+    btns.forEach(b=>b.disabled = false);
+  }
 }
 
 function updateBackupNote(count){
