@@ -827,6 +827,9 @@ function renderCatbar(posts){
 const G_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 const G_AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 const LS_GCLIENT = 'xy_g_client_id';
+// 預設金鑰（Client ID 是公開資訊、不是密碼）：清除瀏覽器資料後也不用重新貼上
+const DEFAULT_GCLIENT = '117295567702-cvg7mceursh769otd7dpb59p74uin4ig.apps.googleusercontent.com';
+try{ if(!localStorage.getItem(LS_GCLIENT)) localStorage.setItem(LS_GCLIENT, DEFAULT_GCLIENT); }catch(e){}
 const LS_GCONNECTED = 'xy_g_connected';
 const LS_SYNC_LAST = 'xy_sync_last';
 const LS_MANIFEST_ID = 'xy_manifest_fileid';
