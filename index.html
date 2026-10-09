@@ -11,10 +11,12 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#EDECEA" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#15141A" media="(prefers-color-scheme: dark)">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Noto+Serif+TC:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root{
     --bg:#EDECEA;--surface:#FAF9F6;--surface-2:#F1EFEB;--ink:#2B2A2E;--muted:#787580;--faint:#AAA6B0;--line:#E2DFD9;
@@ -823,12 +825,15 @@ function renderCatbar(posts){
    Google 雲端硬碟同步（存放於 App 專屬隱藏資料夾 appDataFolder）
    ============================================================ */
 const G_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
+const G_AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 const LS_GCLIENT = 'xy_g_client_id';
 const LS_GCONNECTED = 'xy_g_connected';
 const LS_SYNC_LAST = 'xy_sync_last';
 const LS_MANIFEST_ID = 'xy_manifest_fileid';
 const LS_TOMB = 'xy_tombstones';
-let gTokenClient=null, gToken=null, gTokenExp=0, syncing=false, syncTimer=null;
+const SS_OAUTH_STATE = 'xy_g_oauth_state';
+const SS_RETURN_HASH = 'xy_g_return_hash';
+let gToken=null, gTokenExp=0, syncing=false, syncTimer=null;
 
 /* ---- 逾時保護：任何一次網路請求最多等這麼久就自動放棄 ---- */
 const FETCH_TIMEOUT_MS = 30000;
@@ -843,11 +848,8 @@ function friendlyErr(err){
   if(err && (err.name==='AbortError' || /aborted/i.test(err.message||''))){
     return '連線逾時，請確認網路連線後再試一次';
   }
-  if(err && /popup_failed_to_open/.test(err.message||'')){
-    return '瀏覽器擋住了登入視窗，請至「設定 → Safari → 關閉阻擋彈出式視窗」後再試一次';
-  }
-  if(err && /popup_closed/.test(err.message||'')){
-    return '登入視窗被關閉了，請再試一次並完成 Google 登入';
+  if(err && /access_denied/.test(err.message||'')){
+    return '登入時按了取消或拒絕授權，請再試一次並完成 Google 登入流程';
   }
   return (err && err.message) ? err.message : '發生未預期的錯誤，請稍後再試';
 }
@@ -859,33 +861,62 @@ function saveTombstones(a){ try{ localStorage.setItem(LS_TOMB, JSON.stringify(a)
 function addTombstone(id){ const a=getTombstones().filter(t=>t.id!==id); a.push({id, at:Date.now()}); saveTombstones(a); }
 function isConnected(){ return !!localStorage.getItem(LS_GCLIENT) && localStorage.getItem(LS_GCONNECTED)==='1'; }
 
-function gInitTokenClient(){
+/* ---- Google 登入：整頁跳轉（不用彈出視窗），避開 Safari 對彈出視窗的各種限制 ---- */
+function gRedirectUri(){
+  // 目前頁面網址，不含 hash／查詢字串。必須跟 Google Cloud Console 裡
+  // 這個 OAuth 用戶端設定的「已授權的重新導向 URI」完全一致（含最後的斜線）。
+  return location.origin + location.pathname;
+}
+function startGoogleLogin(){
   const cid = localStorage.getItem(LS_GCLIENT);
-  if(!cid) return false;
-  if(!(window.google && google.accounts && google.accounts.oauth2)) return false;
-  gTokenClient = google.accounts.oauth2.initTokenClient({ client_id:cid, scope:G_SCOPE, callback:()=>{} });
+  if(!cid) return;
+  const state = uid();
+  try{
+    sessionStorage.setItem(SS_OAUTH_STATE, state);
+    sessionStorage.setItem(SS_RETURN_HASH, location.hash || '#journal');
+  }catch(e){}
+  const params = new URLSearchParams({
+    client_id: cid,
+    redirect_uri: gRedirectUri(),
+    response_type: 'token',
+    scope: G_SCOPE,
+    include_granted_scopes: 'true',
+    prompt: 'consent',
+    state
+  });
+  location.href = G_AUTH_ENDPOINT + '?' + params.toString();
+}
+/* 從 Google 登入頁跳轉回來時，網址的 # 後面會帶著 access_token，這裡把它讀出來、
+   清掉網址上的權杖（避免留在網址列或瀏覽紀錄），並還原原本在看的頁面（日記／撰寫）。
+   回傳 true 代表這次載入是剛登入完成、已經拿到新權杖。 */
+function parseAuthRedirect(){
+  const hash = location.hash || '';
+  if(!/[#&]access_token=/.test(hash)) return false;
+  const params = new URLSearchParams(hash.replace(/^#/, ''));
+  const token = params.get('access_token');
+  const expiresIn = parseInt(params.get('expires_in') || '3600', 10);
+  const returnedState = params.get('state');
+  let expectedState = null, restoreHash = '#journal';
+  try{
+    expectedState = sessionStorage.getItem(SS_OAUTH_STATE);
+    restoreHash = sessionStorage.getItem(SS_RETURN_HASH) || '#journal';
+    sessionStorage.removeItem(SS_OAUTH_STATE);
+    sessionStorage.removeItem(SS_RETURN_HASH);
+  }catch(e){}
+  history.replaceState(null, '', location.pathname + restoreHash);
+  if(!token || (expectedState && returnedState !== expectedState)) return false;
+  gToken = token; gTokenExp = Date.now() + expiresIn*1000;
+  try{ localStorage.setItem(LS_GCONNECTED, '1'); }catch(e){}
   return true;
 }
 function gGetToken(interactive){
   return new Promise((resolve,reject)=>{
     if(gToken && Date.now() < gTokenExp-60000){ resolve(gToken); return; }
-    // 沒有有效的快取權杖時，非使用者主動點擊的情境一律不嘗試開啟登入視窗，
-    // 避免 Safari 每次進站都跳出「允許彈出視窗」的提示。
+    // 沒有有效的快取權杖時，非使用者主動點擊的情境一律不嘗試登入，
+    // 避免 Safari 每次進站都跳出提示或整頁跳轉。
     if(!interactive){ reject(new Error('needs_interactive')); return; }
-    if(!gTokenClient && !gInitTokenClient()){ reject(new Error('尚未設定金鑰或 Google 元件未載入')); return; }
-    let settled = false;
-    const popupTimer = setTimeout(()=>{
-      if(!settled){ settled = true; reject(new Error('popup_failed_to_open')); }
-    }, 15000);
-    gTokenClient.callback = (resp)=>{
-      if(settled) return;
-      settled = true; clearTimeout(popupTimer);
-      if(resp && resp.error){ reject(new Error(resp.error)); return; }
-      gToken = resp.access_token; gTokenExp = Date.now() + (resp.expires_in||3600)*1000;
-      resolve(gToken);
-    };
-    try{ gTokenClient.requestAccessToken({ prompt: interactive ? 'consent' : '' }); }
-    catch(e){ if(!settled){ settled=true; clearTimeout(popupTimer); reject(e); } }
+    if(!localStorage.getItem(LS_GCLIENT)){ reject(new Error('尚未設定金鑰')); return; }
+    startGoogleLogin();   // 整頁跳轉去 Google 登入；此頁即將離開，這個 promise 不會被 resolve
   });
 }
 
@@ -1102,7 +1133,7 @@ function bindSync(){
   $('#gClientSave').addEventListener('click', ()=>{
     const v = $('#gClientInput').value.trim();
     if(!v){ toast('請貼上 Client ID'); return; }
-    localStorage.setItem(LS_GCLIENT, v); gTokenClient=null; gInitTokenClient();
+    localStorage.setItem(LS_GCLIENT, v);
     updateSyncModal(); toast('金鑰已儲存，可以按「連結」了');
   });
   $('#syncResumeGo').addEventListener('click', async ()=>{
@@ -1199,27 +1230,40 @@ async function exportData(){
     const posts = await getAllPosts();
     if(posts.length===0){ toast('目前沒有可匯出的資料'); return; }
     toast('正在打包備份…');
-    const out=[];
     let missing = 0;   // 尚未同步完成、備份中先跳過的媒體數量
-    for(const p of posts){
-      const media=[];
-      for(const m of (p.media||[])){
-        // 跨裝置同步中可能有些圖片/影片本機還沒有實際內容（只有雲端的參照），
-        // 這種情況直接跳過該檔案，不讓整個備份卡住或讓分頁當機
-        if(!(m.blob instanceof Blob)){
+    let count = 0;
+    // 直接把備份內容一小段一小段放進 parts 陣列、交給 Blob 組裝，
+    // 不要先在記憶體裡拼出一整份巨大的 JSON 字串——手機相片／影片多的時候，
+    // 舊做法會同時佔用好幾倍的記憶體，導致 Safari 分頁反覆當機、一直跳回錯誤畫面。
+    const parts = [];
+    parts.push(`{"app":"YEN隨筆日記","schema":1,"exportedAt":${Date.now()},"posts":[`);
+    for(let pi=0; pi<posts.length; pi++){
+      const p = posts[pi];
+      if(pi>0) parts.push(',');
+      parts.push(`{"id":${JSON.stringify(p.id)},"content":${JSON.stringify(p.content||'')},"category":${JSON.stringify(p.category||'')},"createdAt":${Number(p.createdAt)||0},"updatedAt":${Number(p.updatedAt)||0},"media":[`);
+      const media = p.media||[];
+      for(let mi=0; mi<media.length; mi++){
+        const m = media[mi];
+        if(mi>0) parts.push(',');
+        let data = null;
+        if(m.blob instanceof Blob){
+          try{ data = await blobToDataURL(m.blob); }
+          catch(e){ missing++; data = null; }
+        }else{
+          // 跨裝置同步中可能有些圖片/影片本機還沒有實際內容（只有雲端的參照），
+          // 這種情況直接跳過該檔案，不讓整個備份卡住或讓分頁當機
           missing++;
-          media.push({ id:m.id, name:m.name, type:m.type, kind:m.kind, data:null });
-          continue;
         }
-        let data;
-        try{ data = await blobToDataURL(m.blob); }
-        catch(e){ missing++; data = null; }
-        media.push({ id:m.id, name:m.name, type:m.type, kind:m.kind, data });
+        parts.push(`{"id":${JSON.stringify(m.id)},"name":${JSON.stringify(m.name||'')},"type":${JSON.stringify(m.type||'')},"kind":${JSON.stringify(m.kind||'')},"data":${data?JSON.stringify(data):'null'}}`);
+        data = null; // 盡快釋放這份資料的參考，降低同時間佔用的記憶體
+        if(mi % 3 === 2) await new Promise(r=>setTimeout(r,0)); // 讓瀏覽器有機會回收記憶體、避免長時間卡住
       }
-      out.push({ id:p.id, content:p.content, category:p.category||'', createdAt:p.createdAt, updatedAt:p.updatedAt, media });
+      parts.push(']}');
+      count++;
     }
-    const payload = { app:'YEN隨筆日記', schema:1, exportedAt:Date.now(), count:out.length, posts:out };
-    const blob = new Blob([JSON.stringify(payload)], {type:'application/json'});
+    parts.push(']}');
+    const blob = new Blob(parts, {type:'application/json'});
+    parts.length = 0;
     const d=new Date(); const pad=n=>String(n).padStart(2,'0');
     const fname = `YEN隨筆日記_備份_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.json`;
 
@@ -1248,7 +1292,7 @@ async function exportData(){
     a.href = URL.createObjectURL(blob); a.click();
     setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
     markDone();
-    toast(doneMsg(`已匯出 ${out.length} 則紀錄`));
+    toast(doneMsg(`已匯出 ${count} 則紀錄`));
   }catch(err){
     console.error('匯出失敗', err);
     toast('備份失敗，請稍後再試一次');
@@ -1436,6 +1480,10 @@ function bindEvents(){
   if(!t) t = window.matchMedia && window.matchMedia('(prefers-color-scheme:dark)').matches ? 'dark':'light';
   applyTheme(t);
 
+  // 如果這次載入是剛從 Google 登入頁跳轉回來，先把網址上的權杖讀出來、
+  // 並把網址還原成原本在看的頁面，routeFromHash() 才會導到正確的頁面。
+  const justAuthed = parseAuthRedirect();
+
   try{
     db = await openDB();
   }catch(err){
@@ -1452,6 +1500,7 @@ function bindEvents(){
   await renderFeed();
   routeFromHash();
   bindSync();
+  if(justAuthed){ toast('已登入 Google，正在同步…'); fullSync(true); }
 })();
 </script>
 </body>
