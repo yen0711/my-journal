@@ -692,6 +692,11 @@ async function startEdit(id){
 let filterMode = 'all';
 let filterValue = '';
 
+/* 分頁顯示＋精簡模式：一次把 40 篇、幾百張圖和影片全部畫出來，手機 Safari 會記憶體不足而當機。
+   現在一次只顯示幾篇，按「顯示更多」再載入；網址加上 ?lite=1 則完全不載入圖片影片，專門用來救援備份。 */
+const FEED_PAGE = 6;
+let feedLimit = FEED_PAGE, feedSig = '';
+const LITE_MODE = (()=>{ try{ return new URLSearchParams(location.search).get('lite')==='1'; }catch(e){ return false; } })();
 async function renderFeed(){
   revokeFeedUrls();
   const feed = $('#feed');
@@ -722,8 +727,16 @@ async function renderFeed(){
     return;
   }
 
+  const sig = catFilter+'|'+filterMode+'|'+filterValue;
+  if(sig!==feedSig){ feedSig = sig; feedLimit = FEED_PAGE; }
+  const visible = LITE_MODE ? shown : shown.slice(0, feedLimit);
   feed.innerHTML='';
-  shown.forEach(p=>{
+  if(LITE_MODE){
+    const note=document.createElement('div'); note.className='empty-state';
+    note.innerHTML='<p>精簡模式：只顯示文字，不載入圖片與影片</p><p class="sub">可以放心按右上角「備份」；備份檔仍會包含全部圖片與影片</p>';
+    feed.appendChild(note);
+  }
+  visible.forEach(p=>{
     const el = document.createElement('article'); el.className='post';
     const rel = relTime(p.createdAt);
     el.innerHTML = `
@@ -742,7 +755,7 @@ async function renderFeed(){
       </div>
       ${p.content ? `<div class="post-body">${mdToHtml(p.content)}</div>` : ''}
     `;
-    if(p.media && p.media.length){
+    if(!LITE_MODE && p.media && p.media.length){
       const visuals = p.media.filter(m=> m.kind==='image' || m.kind==='video');
       const others  = p.media.filter(m=> m.kind!=='image' && m.kind!=='video');
 
@@ -759,7 +772,7 @@ async function renderFeed(){
             const img=document.createElement('img'); img.src=url; img.alt=m.name||''; img.loading='lazy';
             img.onclick=()=>openLightbox(items.filter(x=>x.url), items.filter(x=>x.url).findIndex(x=>x.url===url)); fig.appendChild(img);
           }else{
-            const v=document.createElement('video'); v.src=url; v.controls=true; v.preload='metadata'; v.playsInline=true; fig.appendChild(v);
+            const v=document.createElement('video'); v.src=url; v.controls=true; v.preload='none'; v.playsInline=true; fig.appendChild(v);
             const zoom=document.createElement('button'); zoom.className='v-zoom'; zoom.title='放大瀏覽';
             zoom.innerHTML='<svg viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>';
             zoom.onclick=(e)=>{ e.stopPropagation(); openLightbox(items.filter(x=>x.url), items.filter(x=>x.url).findIndex(x=>x.url===url)); };
@@ -793,6 +806,12 @@ async function renderFeed(){
     };
     feed.appendChild(el);
   });
+  if(!LITE_MODE && shown.length > visible.length){
+    const more=document.createElement('button'); more.className='modal-btn primary'; more.style.cssText='display:block;margin:20px auto 40px';
+    more.textContent=`顯示更多（還有 ${shown.length-visible.length} 則）`;
+    more.onclick=()=>{ feedLimit += FEED_PAGE; renderFeed(); };
+    feed.appendChild(more);
+  }
 }
 
 function rebuildMonthOptions(posts){
